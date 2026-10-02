@@ -7,9 +7,13 @@ import type { SafeUser } from '../types';
 type UserRow = {
   id: string;
   email: string;
-  firstName: string | null;
-  lastName: string | null;
-  fullName: string | null;
+  name: string;
+  phone: string;
+  provinceId: string | null;
+  districtId: string | null;
+  wardId: string | null;
+  detailedAddress: string | null;
+  addressType: string | null;
   role: string | null;
   createdAt?: Date | null;
   updatedAt?: Date | null;
@@ -23,9 +27,13 @@ export function toSafeUser(row: UserRow): SafeUser {
   return {
     id: row.id,
     email: row.email,
-    firstName: row.firstName,
-    lastName: row.lastName,
-    fullName: row.fullName,
+    name: row.name,
+    phone: row.phone,
+    provinceId: row.provinceId,
+    districtId: row.districtId,
+    wardId: row.wardId,
+    detailedAddress: row.detailedAddress,
+    addressType: row.addressType,
     role: row.role,
     ...(row.createdAt !== undefined && { createdAt: row.createdAt }),
     ...(row.updatedAt !== undefined && { updatedAt: row.updatedAt }),
@@ -42,9 +50,13 @@ export function toSafeUser(row: UserRow): SafeUser {
 export const USER_SAFE_COLS = {
   id: true,
   email: true,
-  firstName: true,
-  lastName: true,
-  fullName: true,
+  name: true,
+  phone: true,
+  provinceId: true,
+  districtId: true,
+  wardId: true,
+  detailedAddress: true,
+  addressType: true,
   role: true,
   createdAt: true,
   updatedAt: true,

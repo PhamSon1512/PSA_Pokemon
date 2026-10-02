@@ -197,9 +197,9 @@ if (userExists) {
   newId = createId();
   userSql = [
     `INSERT INTO users`,
-    `  (id, email, password, first_name, last_name, full_name, role, created_at)`,
+    `  (id, email, password, first_name, last_name, full_name, name, phone, role, created_at)`,
     `VALUES`,
-    `  ('${sqlEscape(newId)}', '${sqlEscape(ADMIN_EMAIL)}', '${sqlEscape(passwordHash)}', 'System', 'Admin', 'System Admin', 'admin', ${now});`,
+    `  ('${sqlEscape(newId)}', '${sqlEscape(ADMIN_EMAIL)}', '${sqlEscape(passwordHash)}', 'System', 'Admin', 'System Admin', 'System Admin', '0123456789', 'admin', ${now});`,
   ].join(' ');
 }
 

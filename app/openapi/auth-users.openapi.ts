@@ -8,14 +8,18 @@ import { users } from '~/models';
 const UserInsertSchema = createInsertSchema(users, {
   email: z.string().email().toLowerCase().trim(),
   password: z.string().min(8),
-  firstName: z.string().min(1).max(100),
-  lastName: z.string().min(1).max(100),
+  name: z.string().min(2).max(100),
+  phone: z.string().min(10).max(11),
+  provinceId: z.string().nullable().optional(),
+  districtId: z.string().nullable().optional(),
+  wardId: z.string().nullable().optional(),
+  detailedAddress: z.string().nullable().optional(),
+  addressType: z.string().nullable().optional(),
 });
 
 const UserSelectSchema = createSelectSchema(users, {
-  firstName: z.string().min(1).max(100),
-  lastName: z.string().min(1).max(200),
-  fullName: z.string().min(1).max(200),
+  name: z.string().min(2).max(100),
+  phone: z.string().min(10).max(11),
   // Derived from USER_ROLES in constants.ts — update roles there, this auto-updates
   role: z.enum(USER_ROLES),
 });
@@ -32,6 +36,7 @@ export const TokenResponseSchema = z.object({
   // Field name matches what auth.service.login() returns
   token: z.string(),
   refreshToken: z.string().optional(),
+  user: UserPublicSchema,
 });
 
 // Named exports — single source of truth for Swagger doc + runtime validation
@@ -40,8 +45,13 @@ export const LoginBodySchema = UserInsertSchema.pick({ email: true, password: tr
 export const RegisterBodySchema = UserInsertSchema.pick({
   email: true,
   password: true,
-  firstName: true,
-  lastName: true,
+  name: true,
+  phone: true,
+  provinceId: true,
+  districtId: true,
+  wardId: true,
+  detailedAddress: true,
+  addressType: true,
 });
 
 export const RefreshBodySchema = z.object({
@@ -49,9 +59,13 @@ export const RefreshBodySchema = z.object({
 });
 
 export const UpdateUserBodySchema = UserSelectSchema.pick({
-  firstName: true,
-  lastName: true,
-  fullName: true,
+  name: true,
+  phone: true,
+  provinceId: true,
+  districtId: true,
+  wardId: true,
+  detailedAddress: true,
+  addressType: true,
   role: true,
 }).partial();
 

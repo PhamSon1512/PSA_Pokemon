@@ -1,6 +1,6 @@
 import type { DrizzleDb } from '../db';
 import type { AuthTokens, SafeUser } from '../types';
-import { eq } from 'drizzle-orm';
+import { and, eq, isNull, or } from 'drizzle-orm';
 import { users } from '~/models';
 import { AuthenticationError, ConflictError, NotFoundError, ValidationError } from '../errors';
 import { signJwt, verifyJwt } from '../jwt';
@@ -48,9 +48,11 @@ export async function login(
   email: string,
   password: string,
 ): Promise<AuthTokens & { user: SafeUser }> {
-  const user = await db.query.users.findFirst({
-    where: { email: email.toLowerCase().trim() },
-  });
+  const [user] = await db
+    .select()
+    .from(users)
+    .where(or(eq(users.email, email.toLowerCase().trim()), eq(users.phone, email.trim())))
+    .limit(1);
 
   // Always run comparePassword regardless of user existence — prevents timing attack.
   const passwordMatch = await comparePassword(password, user?.password ?? (await getDummyHash()));
@@ -74,32 +76,48 @@ export async function login(
 export async function register(
   db: DrizzleDb,
   jwtSecret: string,
-  input: { email: string; password: string; firstName?: string; lastName?: string },
+  input: {
+    email: string;
+    password: string;
+    name: string;
+    phone: string;
+    provinceId?: string | null;
+    districtId?: string | null;
+    wardId?: string | null;
+    detailedAddress?: string | null;
+    addressType?: string | null;
+  },
 ): Promise<{ token: string; user: SafeUser }> {
   if (input.password.length < 8) {
     throw new ValidationError('Password must be at least 8 characters', 'VALIDATION_FAILED');
   }
 
   // Only block if a non-deleted user already has this email
-  const existing = await db.query.users.findFirst({
-    where: {
-      AND: [{ email: input.email.toLowerCase().trim() }, { deletedAt: { isNull: true } }],
-    },
-  });
+  // Only block if a non-deleted user already has this email OR phone
+  const [existing] = await db
+    .select()
+    .from(users)
+    .where(and(or(eq(users.email, input.email.toLowerCase().trim()), eq(users.phone, input.phone.trim())), isNull(users.deletedAt)))
+    .limit(1);
 
-  if (existing) throw new ConflictError('Email already registered', 'CONFLICT');
+  if (existing) {
+    if (existing.email === input.email.toLowerCase().trim()) throw new ConflictError('Email này đã được đăng ký', 'CONFLICT');
+    if (existing.phone === input.phone.trim()) throw new ConflictError('Số điện thoại này đã được đăng ký', 'CONFLICT');
+  }
 
   const hashedPassword = await hashPassword(input.password);
-  const fullName = [input.firstName, input.lastName].filter(Boolean).join(' ') || undefined;
-
   const [user] = await db
     .insert(users)
     .values({
       email: input.email.toLowerCase().trim(),
       password: hashedPassword,
-      firstName: input.firstName ?? null,
-      lastName: input.lastName ?? null,
-      fullName: fullName ?? null,
+      name: input.name,
+      phone: input.phone.trim(),
+      provinceId: input.provinceId ?? null,
+      districtId: input.districtId ?? null,
+      wardId: input.wardId ?? null,
+      detailedAddress: input.detailedAddress ?? null,
+      addressType: input.addressType ?? null,
       role: 'user',
     })
     .returning();
@@ -125,9 +143,7 @@ export async function refreshAccessToken(
     throw new AuthenticationError('Refresh token invalid or expired', 'UNAUTHORIZED');
   }
 
-  const user = await db.query.users.findFirst({
-    where: { id: payload.sub },
-  });
+  const [user] = await db.select().from(users).where(eq(users.id, payload.sub)).limit(1);
 
   if (!user) throw new AuthenticationError('Invalid refresh token', 'UNAUTHORIZED');
 
@@ -151,9 +167,7 @@ export async function refreshAccessToken(
  * Fetch the currently authenticated user's profile
  */
 export async function getMe(db: DrizzleDb, userId: string): Promise<SafeUser> {
-  const user = await db.query.users.findFirst({
-    where: { id: userId },
-  });
+  const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
 
   if (!user || user.deletedAt) throw new NotFoundError('User');
 

@@ -14,6 +14,13 @@ export const users = table(
     firstName: text('first_name'),
     lastName: text('last_name'),
     fullName: text('full_name'),
+    name: text('name').notNull(),
+    phone: text('phone').notNull(),
+    provinceId: text('province_id'),
+    districtId: text('district_id'),
+    wardId: text('ward_id'),
+    detailedAddress: text('detailed_address'),
+    addressType: text('address_type'),
     // SEC-8: 'set null' instead of 'set default' — SQLite does not support ON DELETE SET DEFAULT.
     // LOGIC-19: role 'user' MUST be seeded in DB before any signup — FK will fail otherwise.
     role: text('role')
@@ -34,6 +41,9 @@ export const users = table(
     index('user_deleted_at_idx').on(t.deletedAt),
     uniqueIndex('users_email_active_udx')
       .on(t.email)
+      .where(sql`${t.deletedAt} IS NULL`),
+    uniqueIndex('users_phone_active_udx')
+      .on(t.phone)
       .where(sql`${t.deletedAt} IS NULL`),
   ],
 );

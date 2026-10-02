@@ -28,9 +28,18 @@
   --color-brand-blue: #1e3a8a;
   --color-brand-gold: #b45309;
   --color-brand-slate: #f8fafc;
-  --color-brand: #057c8b;
-  --color-text-main: #0d0d0d;
-  --color-text-subtle: #787878;
+  --color-brand: #f28a00;
+  --color-brand-2: #ffb13b;
+  --color-brand-dark: #b95a00;
+  --color-brand-soft: #fff6e8;
+  --color-deep: #111827;
+  --color-hero: #20262f;
+  
+  --color-text-main: #20232a;
+  --color-text-subtle: #69707d;
+  --color-line: #e8eaee;
+  
+  --radius-card: 18px;
 }
 
 @layer base {
@@ -139,6 +148,11 @@ h6 {
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+
+  /* CardVault specific */
+  --bg-color: #f5f6f8;
+  --surface-color: #ffffff;
+  --shadow-custom: 0 12px 30px rgba(27,39,53,.08);
 }
 
 .dark {
@@ -180,6 +194,15 @@ h6 {
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-[var(--bg-color)] text-text-main;
+  }
+}
+
+@layer utilities {
+  .shadow-custom {
+    box-shadow: var(--shadow-custom);
+  }
+  .radius-card {
+    border-radius: var(--radius-card);
   }
 }
