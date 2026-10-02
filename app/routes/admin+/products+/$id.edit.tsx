@@ -4,7 +4,7 @@ import { useForm } from '@mantine/form';
 import { eq } from 'drizzle-orm';
 import { ArrowLeft, Save } from 'lucide-react';
 import { toast } from 'sonner';
-import { xior } from 'xior';
+import xior from 'xior';
 import { getDb } from '~/.server/db';
 import { requireAuthSession } from '~/.server/guard';
 import { Button } from '~/components/ui/button';
@@ -57,9 +57,7 @@ export default function EditCardPage({ loaderData }: Route.ComponentProps) {
   const handleSubmit = form.onSubmit(async (values) => {
     try {
       const client = xior.create({ baseURL: '/api' });
-      await client.put(`/admin/cards/${card.id}`, values, {
-        headers: { Authorization: `Bearer ${store.token}` },
-      });
+      await client.put(`/admin/cards/${card.id}`, values);
       toast.success('Cập nhật sản phẩm thành công');
       navigate('/admin/products');
     } catch (e: any) {
@@ -111,7 +109,7 @@ export default function EditCardPage({ loaderData }: Route.ComponentProps) {
 
             <div className="space-y-2">
               <Label>Trạng thái</Label>
-              <Select value={form.values.status} onValueChange={(v) => form.setFieldValue('status', v)}>
+              <Select value={form.values.status} onValueChange={(v) => form.setFieldValue('status', v as any)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Chọn trạng thái" />
                 </SelectTrigger>

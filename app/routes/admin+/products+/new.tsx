@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router';
 import { useForm } from '@mantine/form';
 import { ArrowLeft, Save } from 'lucide-react';
 import { toast } from 'sonner';
-import { xior } from 'xior';
+import xior from 'xior';
 import { Button } from '~/components/ui/button';
 import { Input } from '~/components/ui/input';
 import { Label } from '~/components/ui/label';
@@ -42,9 +42,7 @@ export default function CreateCardPage() {
   const handleSubmit = form.onSubmit(async (values) => {
     try {
       const client = xior.create({ baseURL: '/api' });
-      await client.post('/admin/cards', values, {
-        headers: { Authorization: `Bearer ${store.token}` },
-      });
+      await client.post('/admin/cards', values);
       toast.success('Thêm sản phẩm thành công');
       navigate('/admin/products');
     } catch (e: any) {
@@ -96,7 +94,7 @@ export default function CreateCardPage() {
 
             <div className="space-y-2">
               <Label>Trạng thái</Label>
-              <Select value={form.values.status} onValueChange={(v) => form.setFieldValue('status', v)}>
+              <Select value={form.values.status} onValueChange={(v) => form.setFieldValue('status', v as any)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Chọn trạng thái" />
                 </SelectTrigger>

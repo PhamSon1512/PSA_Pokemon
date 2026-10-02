@@ -2,7 +2,7 @@ import type { Route } from './+types/_index';
 import { Link, useNavigate } from 'react-router';
 import { Edit, Package, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { xior } from 'xior';
+import xior from 'xior';
 import { getDb } from '~/.server/db';
 import { requireAuthSession } from '~/.server/guard';
 import { listAdminCards } from '~/.server/services/card.service';
@@ -25,9 +25,7 @@ export default function AdminProductsList({ loaderData }: Route.ComponentProps) 
     if (!confirm('Bạn có chắc chắn muốn xóa thẻ này?')) return;
     try {
       const client = xior.create({ baseURL: '/api' });
-      await client.delete(`/admin/cards/${id}`, {
-        headers: { Authorization: `Bearer ${store.token}` },
-      });
+      await client.delete(`/admin/cards/${id}`);
       toast.success('Xóa thẻ thành công');
       window.location.reload();
     } catch (e) {
