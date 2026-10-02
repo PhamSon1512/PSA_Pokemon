@@ -1,9 +1,10 @@
 import { defineRelations } from 'drizzle-orm';
+import { cards } from './card';
 import { media } from './media';
 import { permissions, rolePermissions, roles } from './rbac';
 import { users } from './user';
 
-export const schemaRelations = defineRelations({ roles, permissions, rolePermissions, users, media }, (helpers) => ({
+export const schemaRelations = defineRelations({ roles, permissions, rolePermissions, users, media, cards }, (helpers) => ({
   // roles has many rolePermissions
   // NOTE: roles.users (many) is intentionally omitted — loading all users of a role
   // is an N+1 risk. Query users by role directly when needed.
@@ -36,6 +37,7 @@ export const schemaRelations = defineRelations({ roles, permissions, rolePermiss
     }),
     // alias required: 3 FKs from media → users (uploader/updater/deleter) need disambiguation
     media: helpers.many.media({ alias: 'media_uploader' }),
+    cards: helpers.many.cards({ alias: 'card_creator' }),
   },
 
   // media belongs to one user (uploader) and one user (last updater/deleter)
@@ -54,6 +56,24 @@ export const schemaRelations = defineRelations({ roles, permissions, rolePermiss
       from: helpers.media.deletedBy,
       to: helpers.users.id,
       alias: 'media_deleter',
+    }),
+  },
+
+  cards: {
+    creator: helpers.one.users({
+      from: helpers.cards.createdBy,
+      to: helpers.users.id,
+      alias: 'card_creator',
+    }),
+    updater: helpers.one.users({
+      from: helpers.cards.updatedBy,
+      to: helpers.users.id,
+      alias: 'card_updater',
+    }),
+    deleter: helpers.one.users({
+      from: helpers.cards.deletedBy,
+      to: helpers.users.id,
+      alias: 'card_deleter',
     }),
   },
 }));

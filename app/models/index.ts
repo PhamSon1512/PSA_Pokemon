@@ -3,3 +3,4 @@ export * from './media';
 export * from './rbac';
 export * from './setting';
 export * from './relations';
+export * from './card';

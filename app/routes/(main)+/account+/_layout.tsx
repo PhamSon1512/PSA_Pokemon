@@ -6,8 +6,9 @@ import { store } from '~/lib/store';
 export default function AccountLayout() {
   const snap = useSnapshot(store);
 
-  if (!snap.user) {
-    return <Navigate to="/login" />;
+  // Use store directly instead of snap for synchronous route guarding to prevent bounce-back after login
+  if (!store.user) {
+    return <Navigate to="/login" replace />;
   }
 
   const menu = [

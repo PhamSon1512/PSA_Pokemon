@@ -2,7 +2,7 @@ import { Link } from 'react-router';
 
 export function Footer() {
   return (
-    <footer className="bg-[#17191d] pt-11 text-[#e4e7eb]">
+    <footer className="bg-[#17191d] pt-11 text-[#e4e7eb] dark:bg-[#080a0c]">
       <div className="container grid grid-cols-1 gap-9 pb-9 sm:grid-cols-2 lg:grid-cols-4">
         <div>
           <div className="mb-3 text-[19px] font-black text-white">CARDVAULT</div>

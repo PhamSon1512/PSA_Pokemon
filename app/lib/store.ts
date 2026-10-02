@@ -113,26 +113,83 @@ const initialState: AppState = {
   gradingRequests: MOCK_GRADING_REQUESTS,
 };
 
-const savedState = loadState();
+// Always start with initialState (safe for SSR).
+// Client-side restoration happens via restoreFromStorage() below.
+export const store = proxy<AppState>(initialState);
 
-export const store = proxy<AppState>(savedState || initialState);
-
-// Subscribe to changes and save to localStorage
+// Immediately restore from localStorage when running in browser.
+// This runs at module evaluation time on the client.
 if (typeof window !== 'undefined') {
+  const saved = loadState();
+  if (saved) {
+    if (saved.user !== undefined) store.user = saved.user;
+    if (saved.cart) store.cart = saved.cart;
+    if (saved.notifications) store.notifications = saved.notifications;
+    if (saved.gradingRequests) store.gradingRequests = saved.gradingRequests;
+  }
+
+  // Subscribe to changes and save to localStorage
   import('valtio').then(({ subscribe }) => {
     subscribe(store, () => {
-      localStorage.setItem('cardvault_state', JSON.stringify(store));
+      localStorage.setItem(
+        'cardvault_state',
+        JSON.stringify({
+          user: store.user,
+          cart: store.cart,
+          notifications: store.notifications,
+          gradingRequests: store.gradingRequests,
+        }),
+      );
     });
   });
 }
 
+// Explicit restore helper — call this from layouts as defensive init.
+// Normalizes role to uppercase to match the store's Role type (ADMIN/CUSTOMER/GUEST).
+export const restoreFromStorage = () => {
+  if (typeof window === 'undefined') return;
+  const saved = loadState();
+  if (saved?.user !== undefined && saved.user !== null) {
+    const rawRole = saved.user.role as string;
+    const normalizedRole: Role =
+      rawRole?.toLowerCase() === 'admin'
+        ? 'ADMIN'
+        : rawRole?.toLowerCase() === 'user'
+          ? 'CUSTOMER'
+          : (rawRole as Role) || 'CUSTOMER';
+    store.user = { ...saved.user, role: normalizedRole };
+  } else if (saved?.user === null) {
+    store.user = null;
+  }
+};
+
 // Actions
 export const login = (user: User) => {
   store.user = user;
+  // Persist immediately (don't wait for async subscriber) to avoid redirect race
+  if (typeof window !== 'undefined') {
+    try {
+      const raw = localStorage.getItem('cardvault_state');
+      const current = raw ? JSON.parse(raw) : {};
+      localStorage.setItem('cardvault_state', JSON.stringify({ ...current, user }));
+    } catch (e) {
+      // If parse fails, fallback to overriding
+      localStorage.setItem('cardvault_state', JSON.stringify({ user }));
+    }
+  }
 };
 
 export const logout = () => {
   store.user = null;
+  if (typeof window !== 'undefined') {
+    try {
+      const raw = localStorage.getItem('cardvault_state');
+      const current = raw ? JSON.parse(raw) : {};
+      localStorage.setItem('cardvault_state', JSON.stringify({ ...current, user: null }));
+    } catch (e) {
+      localStorage.removeItem('cardvault_state');
+    }
+  }
 };
 
 export const addToCart = (product: Product) => {

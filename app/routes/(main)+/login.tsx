@@ -1,18 +1,32 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router';
+import { Link, Navigate, useNavigate } from 'react-router';
 import { Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
+import { useSnapshot } from 'valtio';
 import xior from 'xior';
 import { Button } from '~/components/ui/button';
 import { Input } from '~/components/ui/input';
 import { Label } from '~/components/ui/label';
-import { login } from '~/lib/store';
+import { login, restoreFromStorage, store } from '~/lib/store';
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const snap = useSnapshot(store);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+
+  // Synchronously restore state defensively from localStorage
+  restoreFromStorage();
+
+  // If already logged in, redirect away from /login
+  if (snap.user) {
+    const role = (snap.user.role as string)?.toLowerCase();
+    if (role === 'admin') {
+      return <Navigate to="/admin" replace />;
+    }
+    return <Navigate to="/" replace />;
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,20 +42,19 @@ export default function LoginPage() {
 
       const user = res.data?.user || res.data;
 
-      // Update global state
+      const isUserAdmin = (user.role as string)?.toLowerCase() === 'admin';
+
+      // Update global state & localStorage synchronously
       login({
         id: user.id,
         name: user.name,
         email: user.email,
-        role: user.role === 'admin' ? 'ADMIN' : 'CUSTOMER',
+        role: isUserAdmin ? 'ADMIN' : 'CUSTOMER',
         avatar: user.name?.substring(0, 2).toUpperCase() || 'CV',
       });
 
-      if (user.role === 'admin') {
-        navigate('/admin');
-      } else {
-        navigate('/');
-      }
+      const target = isUserAdmin ? '/admin' : '/';
+      navigate(target, { replace: true });
     } catch (err: any) {
       const msg =
         err?.response?.data?.error?.message || err?.response?.data?.message || 'Email/Số điện thoại hoặc mật khẩu không chính xác.';

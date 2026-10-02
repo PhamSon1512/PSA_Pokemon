@@ -53,6 +53,7 @@
     "dayjs": "1.11.18",
     "drizzle-orm": "^1.0.0-beta.18-7eb39f0",
     "embla-carousel": "8.6.0",
+    "embla-carousel-autoplay": "^8.6.0",
     "embla-carousel-react": "^8.6.0",
     "framer-motion": "12.24.12",
     "hono": "^4.12.8",

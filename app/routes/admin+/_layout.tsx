@@ -1,15 +1,21 @@
-import { Navigate, NavLink, Outlet, useNavigate } from 'react-router';
+import { Navigate, NavLink, Outlet } from 'react-router';
 import { Bell, LayoutDashboard, LogOut, Package, Search, ShieldCheck, Users } from 'lucide-react';
 import { useSnapshot } from 'valtio';
 import { Avatar, AvatarFallback, AvatarImage } from '~/components/ui/avatar';
-import { logout, store } from '~/lib/store';
+import { ModeToggle } from '~/components/ui/mode-toggle';
+import { logout, restoreFromStorage, store } from '~/lib/store';
 
 export default function AdminLayout() {
   const snap = useSnapshot(store);
-  const navigate = useNavigate();
 
-  if (!snap.user || snap.user.role !== 'ADMIN') {
-    return <Navigate to="/login" />;
+  // Synchronously restore state defensively from localStorage
+  restoreFromStorage();
+
+  const user = store.user;
+  const isAdmin = user && (user.role === 'ADMIN' || (user.role as string)?.toLowerCase() === 'admin');
+
+  if (!isAdmin || !snap.user) {
+    return <Navigate to="/login" replace />;
   }
 
   const menu = [
@@ -18,6 +24,7 @@ export default function AdminLayout() {
     { to: '/admin/products', label: 'Sản phẩm', icon: <Package className="h-4 w-4" />, end: false },
     { to: '/admin/certificates', label: 'Chứng nhận', icon: <ShieldCheck className="h-4 w-4" />, end: false },
     { to: '/admin/orders', label: 'Đơn hàng', icon: <Users className="h-4 w-4" />, end: false },
+    { to: '/', label: 'Quay lại Cửa hàng', icon: <LayoutDashboard className="h-4 w-4" />, end: true },
   ];
 
   return (
@@ -56,8 +63,10 @@ export default function AdminLayout() {
         <div className="border-t border-white/10 p-4">
           <div className="mb-4 flex items-center gap-3 px-2">
             <Avatar className="h-9 w-9">
-              <AvatarImage src={snap.user.avatar} />
-              <AvatarFallback className="bg-amber-500 text-xs font-bold text-white">AD</AvatarFallback>
+              <AvatarImage src={snap.user.avatar?.startsWith('http') ? snap.user.avatar : undefined} />
+              <AvatarFallback className="bg-amber-500 text-xs font-bold text-white">
+                {snap.user.name?.substring(0, 2).toUpperCase() || 'AD'}
+              </AvatarFallback>
             </Avatar>
             <div>
               <div className="text-sm font-bold text-white">{snap.user.name}</div>
@@ -67,7 +76,7 @@ export default function AdminLayout() {
           <button
             onClick={() => {
               logout();
-              navigate('/login');
+              window.location.href = '/login';
             }}
             className="flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-bold text-red-400 transition-colors hover:bg-red-500/10"
           >
@@ -81,6 +90,7 @@ export default function AdminLayout() {
         <header className="border-line sticky top-0 z-10 flex h-[76px] items-center justify-between border-b bg-white px-6 shadow-sm">
           <div className="hidden text-lg font-bold md:block">Dashboard</div>
           <div className="ml-auto flex items-center gap-4">
+            <ModeToggle />
             <button className="border-line text-muted-foreground relative flex h-10 w-10 items-center justify-center rounded-full border transition hover:bg-gray-50">
               <Bell className="h-5 w-5" />
               <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-red-500"></span>
