@@ -7,7 +7,7 @@
     {
       "binding": "DB",
       "database_name": "cms",
-      "database_id": "a9366185-a56c-42eb-975c-13ad1e8b7aa6",
+      "database_id": "d1c6ab65-f71b-4ebb-857a-007c723958dd",
       "migrations_dir": "migrations"
     }
   ],
@@ -23,7 +23,7 @@
   },
   "vars": {
     "ENVIRONMENT": "production",
-    "R2_PUBLIC_URL": "https://pub-3df7965bb125455f976ecbfa079741c9.r2.dev"
+    "R2_PUBLIC_URL": "https://pub-69e1c216c3114e99a32bb004e6b919b4.r2.dev"
   },
   "compatibility_flags": [
     "nodejs_compat"
