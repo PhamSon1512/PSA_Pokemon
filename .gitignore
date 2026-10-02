@@ -1,0 +1,23 @@
+.DS_Store
+.idea
+.env
+*.local
+/node_modules/
+*.tsbuildinfo
+
+# React Router
+/.react-router/
+/build/
+
+# Cloudflare
+.mf
+.wrangler
+.dev.vars*
+worker-configuration.d.ts
+
+.gitnexus
+.claude/skills/gitnexus
+CLAUDE.md
+AGENTS.md
+migrations/*.sql
+coverage

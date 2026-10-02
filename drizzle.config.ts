@@ -1,0 +1,8 @@
+import type { Config } from 'drizzle-kit';
+
+export default {
+  driver: 'd1-http',
+  dialect: 'sqlite',
+  schema: './app/models/index.ts',
+  out: './migrations',
+} satisfies Config;
