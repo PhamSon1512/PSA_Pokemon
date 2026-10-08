@@ -15,9 +15,10 @@ export type Product = {
   name: string;
   category: string;
   price: number;
-  grade?: string;
-  certificateId?: string;
-  status: 'Nguyên bản' | 'Đã xác thực' | 'Đã bán';
+  originalPrice?: number;
+  discount?: number;
+  sold: number;
+  badges: string[];
   image: string;
 };
 
@@ -42,30 +43,33 @@ export type AppState = {
 export const MOCK_PRODUCTS: Product[] = [
   {
     id: 'p1',
-    name: 'Pikachu Promo',
-    category: 'Pokemon',
-    price: 2490000,
-    grade: '9.5',
-    certificateId: '#123456',
-    status: 'Đã xác thực',
+    name: 'Túi Mù (Mystery Bag) Pokemon TCG Chính Hãng - Tỉ lệ Hit Siêu Cao',
+    category: 'Mystery Bag',
+    price: 249000,
+    originalPrice: 350000,
+    discount: 28,
+    sold: 3450,
+    badges: ['Bán chạy', 'Hit Rate Cao'],
     image: 'https://images.unsplash.com/photo-1613771404784-3a5686aa2be3?q=80&w=300&auto=format&fit=crop', // placeholder
   },
   {
     id: 'p2',
-    name: 'Charizard Base Set',
-    category: 'Pokemon',
-    price: 8990000,
-    grade: '10',
-    certificateId: '#991208',
-    status: 'Đã xác thực',
+    name: 'Hộp Đựng Thẻ Bài CardVault Pro Deck Box Nam Châm Cao Cấp',
+    category: 'Phụ kiện bảo quản',
+    price: 189000,
+    originalPrice: 250000,
+    discount: 24,
+    sold: 1240,
+    badges: ['Trợ giá', 'Mới'],
     image: 'https://images.unsplash.com/photo-1613771404784-3a5686aa2be3?q=80&w=300&auto=format&fit=crop',
   },
   {
     id: 'p3',
-    name: 'Illustration Rare Museum',
-    category: 'Pokemon',
-    price: 790000,
-    status: 'Nguyên bản',
+    name: 'Pack One Piece TCG Awakening of the New Era OP-05',
+    category: 'One Piece',
+    price: 150000,
+    sold: 852,
+    badges: ['Hàng giới hạn', 'Chính hãng'],
     image: 'https://images.unsplash.com/photo-1613771404784-3a5686aa2be3?q=80&w=300&auto=format&fit=crop',
   },
 ];

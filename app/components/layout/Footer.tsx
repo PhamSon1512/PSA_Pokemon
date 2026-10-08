@@ -31,20 +31,20 @@ export function Footer() {
         <div>
           <div className="mb-3.5 text-[13px] font-black">VỀ CARDVAULT</div>
           <div className="flex flex-col gap-2.5">
-            <Link to="/about" className="text-xs text-[#a7adb6] transition hover:text-white">
-              Giới thiệu
-            </Link>
-            <Link to="/about" className="text-xs text-[#a7adb6] transition hover:text-white">
-              Về chúng tôi
+            <Link to="/products" className="text-xs text-[#a7adb6] transition hover:text-white">
+              Cửa hàng
             </Link>
             <Link to="/grading" className="text-xs text-[#a7adb6] transition hover:text-white">
-              Quy trình thẩm định
+              Thẩm định thẻ
             </Link>
-            <Link to="/grading" className="text-xs text-[#a7adb6] transition hover:text-white">
-              Tiêu chuẩn đánh giá
+            <Link to="/graded-cards" className="text-xs text-[#a7adb6] transition hover:text-white">
+              Thẻ đã kiểm định
             </Link>
-            <Link to="/verify" className="text-xs text-[#a7adb6] transition hover:text-white">
-              Xác thực chứng nhận
+            <Link to="/blog" className="text-xs text-[#a7adb6] transition hover:text-white">
+              Bài viết
+            </Link>
+            <Link to="/about" className="text-xs text-[#a7adb6] transition hover:text-white">
+              Về CardVault
             </Link>
           </div>
         </div>

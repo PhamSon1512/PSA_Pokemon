@@ -4,3 +4,8 @@ export * from './rbac';
 export * from './setting';
 export * from './relations';
 export * from './card';
+export * from './product';
+export * from './order';
+export * from './post';
+export * from './category';
+export * from './badge';

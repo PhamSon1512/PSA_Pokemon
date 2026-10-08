@@ -1,15 +1,26 @@
+import type { Route } from './+types/_index';
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { ChevronRight, Filter } from 'lucide-react';
 import { toast } from 'sonner';
+import { getDb } from '~/.server/db';
+import { getPublicProducts } from '~/.server/services/product.service';
+import { FakePurchaseTicker } from '~/components/store/FakePurchaseTicker';
 import { Button } from '~/components/ui/button';
-import { addToCart, MOCK_PRODUCTS } from '~/lib/store';
+import { addToCart } from '~/lib/store';
 
-export default function ProductsPage() {
+export async function loader({ context }: Route.LoaderArgs) {
+  const db = getDb(context);
+  const products = await getPublicProducts(db);
+  return { products };
+}
+
+export default function ProductsPage({ loaderData }: Route.ComponentProps) {
+  const { products } = loaderData;
   const navigate = useNavigate();
   const [filter, setFilter] = useState('All');
 
-  const filteredProducts = filter === 'All' ? MOCK_PRODUCTS : MOCK_PRODUCTS.filter((p) => p.status === filter);
+  const filteredProducts = filter === 'All' ? products : products.filter((p) => p.category === filter);
 
   const handleAddToCart = (product: any) => {
     addToCart(product);
@@ -19,12 +30,15 @@ export default function ProductsPage() {
   return (
     <div className="bg-bg-color min-h-screen py-10">
       <div className="container">
-        <div className="border-line mb-8 flex items-end justify-between border-b pb-4">
-          <div>
-            <h1 className="text-3xl font-bold">Thị trường</h1>
+        <div className="border-line mb-8 flex flex-col items-start justify-between gap-4 border-b pb-4 md:flex-row md:items-end">
+          <div className="shrink-0">
+            <h1 className="text-3xl font-bold">Cửa hàng</h1>
             <p className="text-muted-foreground mt-1">Các sản phẩm sưu tầm được niêm yết</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex w-full flex-1 justify-center md:w-auto">
+            <FakePurchaseTicker />
+          </div>
+          <div className="flex shrink-0 gap-2">
             <Button variant="outline" className="border-line rounded-xl bg-white">
               <Filter className="mr-2 h-4 w-4" />
               Lọc
@@ -35,30 +49,19 @@ export default function ProductsPage() {
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-[240px_1fr]">
           <aside>
             <div className="border-line mb-6 rounded-2xl border bg-white p-4 shadow-sm">
-              <div className="mb-3 text-sm font-bold">Tình trạng</div>
+              <div className="mb-3 text-sm font-bold">Danh mục</div>
               <div className="flex flex-col gap-2">
-                {['All', 'Đã xác thực', 'Nguyên bản'].map((status) => (
-                  <label key={status} className="flex cursor-pointer items-center gap-2 text-sm">
+                {['All', 'Mystery Bag', 'Pokemon', 'One Piece', 'Yu-Gi-Oh!', 'Phụ kiện bảo quản', 'Khác'].map((cat) => (
+                  <label key={cat} className="flex cursor-pointer items-center gap-2 text-sm">
                     <input
                       type="radio"
-                      name="status"
-                      checked={filter === status}
-                      onChange={() => setFilter(status)}
+                      name="category"
+                      checked={filter === cat}
+                      onChange={() => setFilter(cat)}
                       className="accent-brand"
                     />
-                    {status === 'All' ? 'Tất cả' : status}
+                    {cat === 'All' ? 'Tất cả' : cat}
                   </label>
-                ))}
-              </div>
-            </div>
-
-            <div className="border-line rounded-2xl border bg-white p-4 shadow-sm">
-              <div className="mb-3 text-sm font-bold">Danh mục</div>
-              <div className="flex flex-col gap-1">
-                {['Pokemon', 'One Piece', 'Yu-Gi-Oh!', 'Phụ kiện bảo quản'].map((cat) => (
-                  <div key={cat} className="hover:text-brand-dark flex cursor-pointer justify-between py-2 text-sm text-[#5a616c]">
-                    {cat} <ChevronRight className="h-4 w-4 opacity-50" />
-                  </div>
                 ))}
               </div>
             </div>
@@ -66,45 +69,66 @@ export default function ProductsPage() {
 
           <div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {filteredProducts.map((product) => (
-                <article
-                  key={product.id}
-                  className="border-line flex cursor-pointer flex-col overflow-hidden rounded-2xl border bg-white shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-md"
-                  onClick={() => navigate(`/products/${product.id}`)}
-                >
-                  <div className="relative grid h-[205px] place-items-center overflow-hidden bg-gradient-to-br from-[#fff0ce] to-[#fff8ec]">
-                    {product.grade && (
-                      <div className="absolute top-3 right-3 z-10 rounded-lg border border-[#ffd178]/40 bg-[#111827] px-2 py-1 text-[11px] font-black text-[#ffd178]">
-                        GRADE {product.grade}
+              {filteredProducts.map((product) => {
+                // Determine images
+                const mainImage = product.images?.[0] || product.image;
+
+                // Calculate discount if missing
+                const discount =
+                  product.comparePrice && product.comparePrice > product.price
+                    ? Math.round((1 - product.price / product.comparePrice) * 100)
+                    : null;
+
+                return (
+                  <article
+                    key={product.id}
+                    className="border-line flex h-full cursor-pointer flex-col overflow-hidden rounded-2xl border bg-white shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-md dark:border-white/10 dark:bg-[#1f242b]"
+                    onClick={() => navigate(`/products/${product.id}`)}
+                  >
+                    <div className="relative grid h-[220px] shrink-0 place-items-center overflow-hidden bg-gray-100 dark:bg-gray-800">
+                      {discount && (
+                        <div className="absolute top-0 right-0 z-10 flex flex-col items-center justify-center bg-[#ffe97a] px-2 py-1 text-center font-bold text-[#ee4d2d] shadow-sm">
+                          <span className="text-[10px] leading-none uppercase">Giảm</span>
+                          <span className="text-xs leading-none">{discount}%</span>
+                        </div>
+                      )}
+                      {mainImage ? (
+                        <img src={mainImage} alt={product.name} className="h-full w-full object-cover" />
+                      ) : (
+                        <div className="text-xs text-gray-400">No Image</div>
+                      )}
+                    </div>
+                    <div className="flex flex-1 flex-col p-3">
+                      <h3 className="mb-1.5 line-clamp-2 text-[13px] leading-tight font-medium dark:text-white">{product.name}</h3>
+
+                      <div className="mb-2 flex flex-wrap gap-1">
+                        {product.badges?.map((badge: string, idx: number) => (
+                          <span
+                            key={idx}
+                            className="border-brand text-brand inline-block rounded-sm border px-1 text-[9px] font-medium"
+                          >
+                            {badge}
+                          </span>
+                        ))}
                       </div>
-                    )}
-                    <div className="flex h-[165px] w-[120px] rotate-[-3deg] flex-col overflow-hidden rounded-xl border-[4px] border-amber-300 bg-white p-1.5 shadow-xl">
-                      <div className="h-1/2 rounded-t-lg bg-amber-100"></div>
-                      <div className="p-2 text-center text-[10px] font-bold">{product.name}</div>
+
+                      <div className="mt-auto flex items-end justify-between pt-2">
+                        <div>
+                          {product.comparePrice && (
+                            <div className="text-[11px] text-gray-400 line-through">
+                              ₫{product.comparePrice.toLocaleString('vi-VN')}
+                            </div>
+                          )}
+                          <div className="text-base font-medium text-[#ee4d2d]">₫{product.price.toLocaleString('vi-VN')}</div>
+                        </div>
+                        <div className="text-[10px] text-gray-500">
+                          Đã bán {product.sold > 1000 ? `${(product.sold / 1000).toFixed(1)}k` : product.sold}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex flex-1 flex-col p-4">
-                    <h3 className="mb-1.5 line-clamp-2 text-sm font-bold">{product.name}</h3>
-                    <div className="text-muted-foreground mt-auto flex flex-wrap gap-2 text-xs">
-                      {product.status === 'Đã xác thực' && <span className="text-success font-semibold">✓ Đã xác thực</span>}
-                      {product.certificateId && <span>• {product.certificateId}</span>}
-                    </div>
-                    <div className="mt-3 flex items-center justify-between">
-                      <div className="text-lg font-black">{product.price.toLocaleString('vi-VN')}₫</div>
-                      <Button
-                        size="sm"
-                        className="bg-brand-soft text-brand-dark h-8 rounded-lg font-bold hover:bg-amber-100"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleAddToCart(product);
-                        }}
-                      >
-                        Thêm giỏ
-                      </Button>
-                    </div>
-                  </div>
-                </article>
-              ))}
+                  </article>
+                );
+              })}
             </div>
 
             {filteredProducts.length === 0 && (

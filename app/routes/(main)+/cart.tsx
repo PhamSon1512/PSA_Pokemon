@@ -1,12 +1,15 @@
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { ArrowRight, ShoppingBag, Trash2 } from 'lucide-react';
 import { useSnapshot } from 'valtio';
+import { InvoiceModal } from '~/components/store/InvoiceModal';
 import { Button } from '~/components/ui/button';
-import { removeFromCart, store, updateCartQuantity } from '~/lib/store';
+import { clearCart, removeFromCart, store, updateCartQuantity } from '~/lib/store';
 
 export default function CartPage() {
   const snap = useSnapshot(store);
   const navigate = useNavigate();
+  const [invoiceModalOpen, setInvoiceModalOpen] = useState(false);
 
   const totalAmount = snap.cart.reduce((total, item) => total + item.product.price * item.quantity, 0);
 
@@ -98,13 +101,21 @@ export default function CartPage() {
             <Button
               size="lg"
               className="bg-brand hover:bg-brand-dark w-full rounded-xl font-bold text-white"
-              onClick={() => navigate('/checkout')}
+              onClick={() => setInvoiceModalOpen(true)}
             >
               Tiến hành thanh toán <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </div>
         </div>
       </div>
+      <InvoiceModal
+        open={invoiceModalOpen}
+        onOpenChange={setInvoiceModalOpen}
+        cartItems={snap.cart.map((i) => ({ ...i.product, quantity: i.quantity }))}
+        onSuccess={() => {
+          clearCart();
+        }}
+      />
     </div>
   );
 }

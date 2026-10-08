@@ -22,15 +22,17 @@ export default function AdminLayout() {
     { to: '/admin', label: 'Tổng quan', icon: <LayoutDashboard className="h-4 w-4" />, end: true },
     { to: '/admin/grading', label: 'Hồ sơ thẩm định', icon: <Search className="h-4 w-4" />, end: false },
     { to: '/admin/products', label: 'Sản phẩm', icon: <Package className="h-4 w-4" />, end: false },
+    { to: '/admin/categories', label: 'Danh mục', icon: <LayoutDashboard className="h-4 w-4" />, end: false },
+    { to: '/admin/badges', label: 'Nhãn nổi bật', icon: <ShieldCheck className="h-4 w-4" />, end: false },
     { to: '/admin/certificates', label: 'Chứng nhận', icon: <ShieldCheck className="h-4 w-4" />, end: false },
     { to: '/admin/orders', label: 'Đơn hàng', icon: <Users className="h-4 w-4" />, end: false },
     { to: '/', label: 'Quay lại Cửa hàng', icon: <LayoutDashboard className="h-4 w-4" />, end: true },
   ];
 
   return (
-    <div className="flex min-h-screen bg-[#f3f4f6]">
+    <div className="flex h-screen overflow-hidden bg-[#f3f4f6]">
       {/* Sidebar */}
-      <aside className="sticky top-0 flex hidden h-screen w-[260px] flex-col bg-[#111827] text-white md:flex">
+      <aside className="flex hidden h-screen w-[260px] flex-col bg-[#111827] text-white md:flex">
         <div className="flex h-[76px] items-center border-b border-white/10 px-6">
           <div className="flex items-center gap-3">
             <div className="from-brand grid h-[32px] w-[32px] skew-x-[-5deg] place-items-center rounded-lg bg-gradient-to-br to-[#f9b24a] font-black text-white">
@@ -86,8 +88,8 @@ export default function AdminLayout() {
       </aside>
 
       {/* Main Content */}
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="border-line sticky top-0 z-10 flex h-[76px] items-center justify-between border-b bg-white px-6 shadow-sm">
+      <div className="flex h-screen min-w-0 flex-1 flex-col overflow-hidden">
+        <header className="border-line flex h-[76px] shrink-0 items-center justify-between border-b bg-white px-6 shadow-sm">
           <div className="hidden text-lg font-bold md:block">Dashboard</div>
           <div className="ml-auto flex items-center gap-4">
             <ModeToggle />
@@ -98,7 +100,7 @@ export default function AdminLayout() {
           </div>
         </header>
 
-        <main className="flex-1 overflow-auto p-6">
+        <main className="flex-1 overflow-y-auto p-6">
           <Outlet />
         </main>
       </div>

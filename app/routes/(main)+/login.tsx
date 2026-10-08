@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router';
 import { Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
@@ -7,7 +7,7 @@ import xior from 'xior';
 import { Button } from '~/components/ui/button';
 import { Input } from '~/components/ui/input';
 import { Label } from '~/components/ui/label';
-import { login, restoreFromStorage, store } from '~/lib/store';
+import { login, logout, restoreFromStorage, store } from '~/lib/store';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -16,16 +16,28 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
-  // Synchronously restore state defensively from localStorage
-  restoreFromStorage();
-
-  // If already logged in, redirect away from /login
-  if (snap.user) {
-    const role = (snap.user.role as string)?.toLowerCase();
-    if (role === 'admin') {
-      return <Navigate to="/admin" replace />;
+  // Handle redirects and stale state safely after render
+  useEffect(() => {
+    restoreFromStorage();
+    if (snap.user) {
+      const hasToken = typeof document !== 'undefined' && document.cookie.includes('token=');
+      if (hasToken) {
+        const role = (snap.user.role as string)?.toLowerCase();
+        if (role === 'admin') {
+          navigate('/admin', { replace: true });
+        } else {
+          navigate('/', { replace: true });
+        }
+      } else {
+        // Clear local state and localStorage if token is missing
+        logout();
+      }
     }
-    return <Navigate to="/" replace />;
+  }, [snap.user, navigate]);
+
+  // If already logged in AND cookie exists, don't render the form while redirecting
+  if (snap.user && typeof document !== 'undefined' && document.cookie.includes('token=')) {
+    return null;
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -50,7 +62,7 @@ export default function LoginPage() {
         name: user.name,
         email: user.email,
         role: isUserAdmin ? 'ADMIN' : 'CUSTOMER',
-        avatar: user.name?.substring(0, 2).toUpperCase() || 'CV',
+        avatar: user.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}&backgroundColor=e5e7eb`,
       });
 
       const target = isUserAdmin ? '/admin' : '/';

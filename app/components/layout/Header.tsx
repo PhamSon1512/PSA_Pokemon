@@ -54,9 +54,10 @@ export function Header() {
           <nav className="hidden flex-1 items-center gap-1.5 lg:flex">
             {[
               { to: '/', label: 'Trang chủ' },
-              { to: '/products', label: 'Thị trường' },
+              { to: '/products', label: 'Cửa hàng' },
               { to: '/grading', label: 'Thẩm định thẻ' },
-              { to: '/verify', label: 'Xác thực chứng nhận' },
+              { to: '/graded-cards', label: 'Thẻ đã kiểm định' },
+              { to: '/blog', label: 'Bài viết' },
               { to: '/about', label: 'Về CardVault' },
               { to: '/account/cards', label: 'Bộ sưu tập', auth: true },
             ].map((link) => {

@@ -6,18 +6,21 @@ import { CheckCircle2, ChevronRight, FileBadge, QrCode, Search, ShieldCheck } fr
 import { toast } from 'sonner';
 import { getDb } from '~/.server/db';
 import { searchCards } from '~/.server/services/card.service';
+import { getPublicProducts } from '~/.server/services/product.service';
+import { FakePurchaseTicker } from '~/components/store/FakePurchaseTicker';
 import { Button } from '~/components/ui/button';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '~/components/ui/carousel';
-import { addToCart, MOCK_PRODUCTS } from '~/lib/store';
+import { addToCart } from '~/lib/store';
 
 export async function loader({ context }: Route.LoaderArgs) {
   const db = getDb(context);
   const showcaseCards = await searchCards(db, '');
-  return { showcaseCards };
+  const products = await getPublicProducts(db);
+  return { showcaseCards, products };
 }
 
 export default function IndexPage({ loaderData }: Route.ComponentProps) {
-  const { showcaseCards } = loaderData;
+  const { showcaseCards, products } = loaderData;
   const navigate = useNavigate();
   const [searchCode, setSearchCode] = useState('');
   const [showResult, setShowResult] = useState(false);
@@ -135,14 +138,15 @@ export default function IndexPage({ loaderData }: Route.ComponentProps) {
       {/* Market Section */}
       <section className="bg-bg-color py-14 dark:bg-[#0b0e12]" id="shop">
         <div className="container">
-          <div className="mb-6 flex flex-col items-start justify-between gap-5 md:flex-row md:items-end">
-            <div>
-              <h2 className="m-0 text-2xl font-bold tracking-tight dark:text-white">Khám phá thị trường</h2>
-              <p className="text-muted-foreground mt-1.5 text-sm dark:text-gray-400">
-                Những lựa chọn dành cho người sưu tầm, từ thẻ nguyên bản đến các sản phẩm đã được xác thực.
-              </p>
+          <div className="mb-6 flex flex-col items-start justify-between gap-5 md:flex-row md:items-center">
+            <div className="shrink-0">
+              <h2 className="m-0 text-2xl font-bold tracking-tight dark:text-white">Cửa hàng CardVault</h2>
+              <p className="text-muted-foreground mt-1.5 text-sm dark:text-gray-400">Sản phẩm nổi bật dành cho người sưu tầm.</p>
             </div>
-            <Button variant="link" className="text-brand-dark px-0 font-extrabold" onClick={() => navigate('/products')}>
+            <div className="flex w-full flex-1 justify-center md:w-auto">
+              <FakePurchaseTicker />
+            </div>
+            <Button variant="link" className="text-brand-dark shrink-0 px-0 font-extrabold" onClick={() => navigate('/products')}>
               Xem tất cả →
             </Button>
           </div>
@@ -150,75 +154,170 @@ export default function IndexPage({ loaderData }: Route.ComponentProps) {
           <div className="grid grid-cols-1 gap-5 lg:grid-cols-[220px_1fr]">
             <aside className="border-line hidden h-fit rounded-2xl border bg-white p-2.5 shadow-sm lg:block dark:border-white/10 dark:bg-[#171c22]">
               <div className="p-2.5 text-sm font-[850] dark:text-white">Danh mục</div>
-              {['Pokemon', 'One Piece', 'Yu-Gi-Oh!', 'Sports Cards', 'Thẻ đã xác thực', 'Thẻ nguyên bản', 'Phụ kiện bảo quản'].map(
-                (cat, idx) => (
-                  <div
-                    key={idx}
-                    className={`flex cursor-pointer items-center justify-between rounded-xl p-2.5 text-sm transition-colors ${idx === 0 ? 'bg-brand-soft text-brand-dark dark:bg-brand-dark/20 dark:text-brand-light font-[750]' : 'hover:bg-brand-soft hover:text-brand-dark text-[#5a616c] dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-white'}`}
-                  >
-                    {cat} <ChevronRight className="h-4 w-4 opacity-50" />
-                  </div>
-                ),
-              )}
+              {['Túi mù (Mystery Bag)', 'Pokemon', 'One Piece', 'Yu-Gi-Oh!', 'Phụ kiện'].map((cat, idx) => (
+                <div
+                  key={idx}
+                  className={`flex cursor-pointer items-center justify-between rounded-xl p-2.5 text-sm transition-colors ${idx === 0 ? 'bg-brand-soft text-brand-dark dark:bg-brand-dark/20 dark:text-brand-light font-[750]' : 'hover:bg-brand-soft hover:text-brand-dark text-[#5a616c] dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-white'}`}
+                >
+                  {cat} <ChevronRight className="h-4 w-4 opacity-50" />
+                </div>
+              ))}
             </aside>
 
-            <Carousel
-              plugins={[Autoplay({ delay: 3000 })]}
-              opts={{
-                align: 'start',
-                loop: true,
-              }}
-              className="w-full"
-            >
-              <CarouselContent className="-ml-4">
-                {showcaseCards.map((card: any) => (
-                  <CarouselItem key={card.id} className="pl-4 sm:basis-1/2 lg:basis-1/3">
-                    <article
-                      className="border-line flex cursor-pointer flex-col overflow-hidden rounded-2xl border bg-white shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-md dark:border-white/10 dark:bg-[#1f242b]"
-                      onClick={() => navigate(`/verify/${card.certNumber}`)}
-                    >
-                      <div className="relative grid h-[240px] place-items-center overflow-hidden bg-gradient-to-br from-[#fff0ce] to-[#fff8ec]">
-                        {card.itemGrade && (
-                          <div className="absolute top-3 right-3 z-10 rounded-lg border border-[#ffd178]/40 bg-[#111827] px-2 py-1 text-[11px] font-black text-[#ffd178]">
-                            {card.itemGrade}
+            <div className="flex w-full min-w-0 flex-col">
+              <Carousel
+                plugins={[Autoplay({ delay: 3000, stopOnMouseEnter: true })]}
+                opts={{
+                  align: 'start',
+                  loop: true,
+                }}
+                className="w-full"
+              >
+                <CarouselContent className="-ml-4">
+                  {products.map((product: any) => {
+                    const mainImage = product.images?.[0] || product.image;
+                    const discount =
+                      product.comparePrice && product.comparePrice > product.price
+                        ? Math.round((1 - product.price / product.comparePrice) * 100)
+                        : null;
+
+                    return (
+                      <CarouselItem key={product.id} className="pl-4 sm:basis-1/2 lg:basis-1/3">
+                        <article
+                          className="border-line flex h-full cursor-pointer flex-col overflow-hidden rounded-2xl border bg-white shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-md dark:border-white/10 dark:bg-[#1f242b]"
+                          onClick={() => navigate(`/products/${product.id}`)}
+                        >
+                          <div className="relative grid h-[220px] shrink-0 place-items-center overflow-hidden bg-gray-100 dark:bg-gray-800">
+                            {discount && (
+                              <div className="absolute top-0 right-0 z-10 flex flex-col items-center justify-center bg-[#ffe97a] px-2 py-1 text-center font-bold text-[#ee4d2d] shadow-sm">
+                                <span className="text-[10px] leading-none uppercase">Giảm</span>
+                                <span className="text-xs leading-none">{discount}%</span>
+                              </div>
+                            )}
+                            {mainImage ? (
+                              <img src={mainImage} alt={product.name} className="h-full w-full object-cover" />
+                            ) : (
+                              <div className="text-xs text-gray-400">No Image</div>
+                            )}
+                          </div>
+                          <div className="flex flex-1 flex-col p-3">
+                            <h3 className="mb-1.5 line-clamp-2 text-[13px] leading-tight font-medium dark:text-white">
+                              {product.name}
+                            </h3>
+
+                            <div className="mb-2 flex flex-wrap gap-1">
+                              {product.badges?.map((badge: string, idx: number) => (
+                                <span
+                                  key={idx}
+                                  className="border-brand text-brand inline-block rounded-sm border px-1 text-[9px] font-medium"
+                                >
+                                  {badge}
+                                </span>
+                              ))}
+                            </div>
+
+                            <div className="mt-auto flex items-end justify-between pt-2">
+                              <div>
+                                {product.comparePrice && (
+                                  <div className="text-[11px] text-gray-400 line-through">
+                                    ₫{product.comparePrice.toLocaleString('vi-VN')}
+                                  </div>
+                                )}
+                                <div className="text-base font-medium text-[#ee4d2d]">₫{product.price.toLocaleString('vi-VN')}</div>
+                              </div>
+                              <div className="text-[10px] text-gray-500">
+                                Đã bán {product.sold > 1000 ? `${(product.sold / 1000).toFixed(1)}k` : product.sold}
+                              </div>
+                            </div>
+                          </div>
+                        </article>
+                      </CarouselItem>
+                    );
+                  })}
+                </CarouselContent>
+                <div className="hidden sm:block">
+                  <CarouselPrevious className="-left-4" />
+                  <CarouselNext className="-right-4" />
+                </div>
+              </Carousel>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Graded Cards Section */}
+      <section className="bg-white py-14 dark:bg-[#0b0e12]" id="graded-cards">
+        <div className="container">
+          <div className="mb-6 flex flex-col items-start justify-between gap-5 md:flex-row md:items-end">
+            <div>
+              <h2 className="m-0 text-2xl font-bold tracking-tight dark:text-white">Thẻ đã kiểm định</h2>
+              <p className="text-muted-foreground mt-1.5 text-sm dark:text-gray-400">
+                Bộ sưu tập thẻ đã qua quy trình thẩm định chuyên nghiệp của CardVault.
+              </p>
+            </div>
+            <Button variant="link" className="text-brand-dark px-0 font-extrabold" onClick={() => navigate('/graded-cards')}>
+              Xem tất cả →
+            </Button>
+          </div>
+
+          <div className="mb-6 flex flex-wrap gap-2">
+            {['Tất cả', 'Pokemon', 'Yu-Gi-Oh!', 'One Piece', 'Sports Cards'].map((cat, idx) => (
+              <button
+                key={cat}
+                className={`rounded-full px-4 py-2 text-sm font-bold transition-colors ${idx === 0 ? 'bg-brand text-white shadow-md' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10'}`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+
+          <Carousel
+            plugins={[Autoplay({ delay: 3500, stopOnMouseEnter: true })]}
+            opts={{ align: 'start', loop: true }}
+            className="w-full"
+          >
+            <CarouselContent className="-ml-4">
+              {showcaseCards.map((card: any) => (
+                <CarouselItem key={card.id} className="pl-4 sm:basis-1/2 lg:basis-1/4">
+                  <article
+                    className="border-line flex cursor-pointer flex-col overflow-hidden rounded-2xl border bg-white shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-md dark:border-white/10 dark:bg-[#1f242b]"
+                    onClick={() => navigate(`/verify/${card.certNumber}`)}
+                  >
+                    <div className="relative grid h-[240px] place-items-center overflow-hidden bg-gradient-to-br from-[#171c23] to-[#272d35]">
+                      {card.itemGrade && (
+                        <div className="absolute top-3 right-3 z-10 rounded-lg border border-[#ffd178]/40 bg-[#111827] px-2 py-1 text-[11px] font-black text-[#ffd178]">
+                          {card.itemGrade}
+                        </div>
+                      )}
+                      <div className="flex h-full w-full flex-col overflow-hidden p-4">
+                        {card.frontImage ? (
+                          <img src={card.frontImage} className="h-full w-full object-contain" alt={card.cardName} />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center rounded-xl bg-gray-800 text-xs font-bold text-gray-400">
+                            No Image
                           </div>
                         )}
-                        <div className="flex h-full w-full flex-col overflow-hidden p-4">
-                          {card.frontImage ? (
-                            <img src={card.frontImage} className="h-full w-full object-contain" alt={card.cardName} />
-                          ) : (
-                            <div className="flex h-full w-full items-center justify-center rounded-xl bg-amber-100 text-xs font-bold text-amber-800">
-                              No Image
-                            </div>
-                          )}
-                        </div>
                       </div>
-                      <div className="flex flex-1 flex-col p-4">
-                        <h3 className="mb-1.5 line-clamp-2 text-sm font-bold dark:text-white">{card.cardName}</h3>
-                        <div className="text-muted-foreground mt-auto flex flex-wrap gap-2 text-xs">
-                          {card.status === 'ACTIVE' && <span className="text-success font-semibold">✓ Đã xác thực</span>}
-                          {card.certNumber && <span className="dark:text-gray-400">• {card.certNumber}</span>}
-                        </div>
-                        <div className="mt-3 flex items-center justify-between">
-                          <div className="text-brand-dark text-lg font-black">{card.psaEstimate || 'N/A'}</div>
-                          <Button
-                            size="sm"
-                            className="bg-brand-soft text-brand-dark dark:bg-brand-dark/20 dark:text-brand-light dark:hover:bg-brand-dark/40 h-8 rounded-lg font-bold hover:bg-amber-100"
-                          >
-                            Xem chi tiết
-                          </Button>
-                        </div>
+                    </div>
+                    <div className="flex flex-1 flex-col p-4">
+                      <h3 className="mb-1.5 line-clamp-2 text-sm font-bold dark:text-white">{card.cardName}</h3>
+                      <div className="text-muted-foreground mt-auto flex flex-wrap gap-2 text-xs">
+                        {card.certNumber && <span className="dark:text-gray-400">Cert: #{card.certNumber}</span>}
                       </div>
-                    </article>
-                  </CarouselItem>
-                ))}
-              </CarouselContent>
-              <div className="hidden sm:block">
-                <CarouselPrevious className="-left-4" />
-                <CarouselNext className="-right-4" />
-              </div>
-            </Carousel>
-          </div>
+                      <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-3 dark:border-white/10">
+                        <div className="text-sm font-medium text-gray-500 dark:text-gray-400">Ước tính:</div>
+                        <div className="text-brand-dark text-base font-black">{card.psaEstimate || 'N/A'}</div>
+                      </div>
+                    </div>
+                  </article>
+                </CarouselItem>
+              ))}
+            </CarouselContent>
+            <div className="hidden sm:block">
+              <CarouselPrevious className="-left-4" />
+              <CarouselNext className="-right-4" />
+            </div>
+          </Carousel>
         </div>
       </section>
 
@@ -261,74 +360,17 @@ export default function IndexPage({ loaderData }: Route.ComponentProps) {
             ].map((trust, idx) => (
               <div
                 key={idx}
-                className="border-line rounded-2xl border bg-white p-5 shadow-sm dark:border-white/10 dark:bg-[#171c22]"
+                className="group border-line hover:border-brand/30 rounded-2xl border bg-white p-5 shadow-sm transition-all duration-300 hover:scale-[1.02] hover:shadow-lg dark:border-white/10 dark:bg-[#171c22]"
               >
-                <div className="bg-brand-soft text-brand-dark dark:bg-brand-dark/20 dark:text-brand-light mb-3 grid h-11 w-11 place-items-center rounded-xl">
+                <div className="from-brand-soft text-brand-dark dark:from-brand-dark/30 dark:to-brand-dark/10 dark:text-brand-light mb-4 grid h-14 w-14 place-items-center rounded-xl bg-gradient-to-br to-amber-100 transition-transform group-hover:scale-110">
                   {trust.icon}
                 </div>
                 <h3 className="mb-1.5 text-sm font-bold dark:text-white">{trust.title}</h3>
-                <p className="text-muted-foreground text-xs leading-relaxed dark:text-gray-400">{trust.desc}</p>
+                <p className="text-muted-foreground mb-3 text-xs leading-relaxed dark:text-gray-400">{trust.desc}</p>
+                {idx === 0 && <div className="text-brand text-xs font-semibold">2,000+ thẻ đã xác thực</div>}
+                {idx === 2 && <div className="text-brand text-xs font-semibold">500+ người sưu tầm tin dùng</div>}
               </div>
             ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Brand Section */}
-      <section className="bg-white py-14 dark:bg-[#0b0e12]" id="about">
-        <div className="container grid grid-cols-1 items-center gap-9 lg:grid-cols-[1.1fr_0.9fr]">
-          <div>
-            <span className="bg-brand-soft text-brand-dark dark:bg-brand-dark/20 dark:text-brand-light dark:border-brand-dark/30 mb-4 inline-block rounded-full border border-[#ffe2b0] px-3 py-1 text-[11px] font-extrabold tracking-wider">
-              VỀ CARDVAULT
-            </span>
-            <h2 className="mb-4 text-[28px] leading-[1.2] font-bold md:text-[32px] dark:text-white">
-              Một nền tảng cho toàn bộ hành trình sưu tầm
-            </h2>
-            <p className="text-muted-foreground text-sm leading-[1.7] md:text-base dark:text-gray-400">
-              CardVault xây dựng một hệ sinh thái liền mạch cho người sưu tầm: <b className="dark:text-gray-200">xác thực</b>,{' '}
-              <b className="dark:text-gray-200">thẩm định</b>, <b className="dark:text-gray-200">quản lý bộ sưu tập</b> và{' '}
-              <b className="dark:text-gray-200">khám phá giao dịch</b> trong cùng một trải nghiệm minh bạch và đáng tin cậy.
-            </p>
-            <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
-              {[
-                'Quản lý bộ sưu tập tập trung',
-                'Theo dõi hồ sơ & lịch sử',
-                'Chứng nhận điện tử & QR',
-                'Khám phá & giao dịch an toàn',
-              ].map((item, idx) => (
-                <div
-                  key={idx}
-                  className="border-line flex items-center rounded-xl border bg-white p-3 text-xs font-[750] dark:border-white/10 dark:bg-[#1f242b] dark:text-white"
-                >
-                  <span className="bg-brand-soft text-brand-dark dark:bg-brand-dark/20 dark:text-brand-light mr-2 grid h-5 w-5 place-items-center rounded-full text-[10px]">
-                    ✓
-                  </span>
-                  {item}
-                </div>
-              ))}
-            </div>
-          </div>
-          <div className="relative min-h-[310px] overflow-hidden rounded-3xl bg-gradient-to-br from-[#171c23] to-[#272d35] p-6 shadow-lg">
-            <div className="pointer-events-none absolute -top-[80px] -right-[100px] h-[280px] w-[280px] rounded-full bg-[radial-gradient(circle,rgba(255,177,59,0.22),transparent_70%)]"></div>
-
-            <div className="absolute top-[28px] left-[70%] z-0 h-[260px] w-[205px] rotate-[15deg] rounded-2xl border border-white/20 bg-white/10 p-3 shadow-2xl backdrop-blur-sm md:left-[60%]">
-              <div className="relative flex h-full flex-col rounded-xl bg-gradient-to-br from-[#fcfcfb] to-[#ebedf1] p-2.5">
-                <div className="absolute top-2.5 right-2.5 rounded-lg bg-[#111827] px-2 py-1 text-xs font-black text-[#ffcc76]">
-                  9.5
-                </div>
-                <div className="mx-auto mt-5 mb-2 h-[110px] w-[92px] rounded-lg bg-gradient-to-br from-[#ffd78b] to-[#ef8d00] shadow-[inset_0_0_0_3px_#ffefa9]"></div>
-                <div className="mt-auto mb-1 text-center text-[9px] font-black text-gray-900">
-                  CARDVAULT VERIFIED
-                  <br />
-                  CERTIFICATE #123456
-                </div>
-              </div>
-            </div>
-
-            <div className="absolute bottom-6 left-6 z-10 max-w-[250px] p-4 text-xs text-[#d8dce1]">
-              <b className="mb-1 block text-[15px] text-white">Hồ sơ thẻ rõ ràng</b>
-              Điểm đánh giá, hình ảnh đối chiếu và thông tin chứng nhận được trình bày nhất quán.
-            </div>
           </div>
         </div>
       </section>
