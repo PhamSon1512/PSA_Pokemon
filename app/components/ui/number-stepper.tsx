@@ -39,7 +39,9 @@ export function NumberStepper({
   return (
     <div
       className={cn(
-        'flex h-9 items-center overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-white/10 dark:bg-white/5',
+        'flex h-9 items-center overflow-hidden rounded-lg border border-gray-200 bg-white transition-colors dark:border-white/10 dark:bg-white/5',
+        'hover:border-amber-500 hover:bg-amber-500/5 dark:hover:bg-amber-500/10',
+        'focus-within:border-amber-500 focus-within:ring-[3px] focus-within:ring-amber-500/20',
         disabled && 'pointer-events-none opacity-50',
         className,
       )}

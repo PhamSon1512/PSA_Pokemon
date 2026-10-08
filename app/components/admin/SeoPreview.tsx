@@ -218,7 +218,7 @@ export function SeoPreview({
         </div>
 
         {/* Tag chips + input */}
-        <div className="flex min-h-[38px] flex-wrap gap-1.5 rounded-lg border border-gray-200 bg-white p-2 transition-colors focus-within:border-amber-400 focus-within:ring-1 focus-within:ring-amber-400/30 dark:border-white/10 dark:bg-white/5">
+        <div className="flex min-h-[38px] flex-wrap gap-1.5 rounded-lg border border-gray-200 bg-white p-2 transition-colors focus-within:border-amber-500 focus-within:ring-[3px] focus-within:ring-amber-500/20 hover:border-amber-500 hover:bg-amber-500/5 dark:border-white/10 dark:bg-white/5 dark:hover:bg-amber-500/10">
           {keywordList.map((kw, i) => (
             <span
               key={i}

@@ -66,7 +66,7 @@ export type UploadMediaInput = {
   title?: string;
   description?: string;
   tags?: string[];
-  uploadedBy: string;
+  uploadedBy: string | null;
 };
 
 // ─── API Response ─────────────────────────────────────────────────────────────

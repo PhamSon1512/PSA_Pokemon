@@ -43,6 +43,7 @@ import {
   adminListCategoriesRoute,
   adminUpdateCategoryRoute,
 } from '~/openapi/categories.openapi';
+import { deleteMediaRoute, getMediaRoute, listMediaRoute, updateMediaRoute, uploadMediaRoute } from '~/openapi/media.openapi';
 import { adminListOrdersRoute, adminUpdateOrderStatusRoute, createOrderRoute } from '~/openapi/orders.openapi';
 import {
   adminCreatePostRoute,
@@ -61,10 +62,12 @@ import {
   getPublicProductsRoute,
 } from '~/openapi/products.openapi';
 import { requireAuthSession } from './guard';
+import { verifyJwt } from './jwt';
 import { login, register } from './services/auth.service';
 import { createBadge, deleteBadge, listBadges, updateBadge } from './services/badge.service';
 import { createCard, deleteCard, getCardByCertNumber, listAdminCards, searchCards, updateCard } from './services/card.service';
 import { createCategory, deleteCategory, listCategories, updateCategory } from './services/category.service';
+import { deleteMedia, getMediaById, listMedia, uploadMedia } from './services/media.service';
 import { createOrder, listAdminOrders, updateOrderStatus } from './services/order.service';
 import { createPost, deletePost, getPostBySlug, getPublicPosts, listAdminPosts, updatePost } from './services/post.service';
 import {
@@ -75,6 +78,19 @@ import {
   listAdminProducts,
   updateProduct,
 } from './services/product.service';
+import { parseCookie, TOKEN_COOKIE } from './session';
+
+async function getUserIdFromCookie(c: any) {
+  try {
+    const cookieHeader = c.req.header('cookie');
+    const token = parseCookie(cookieHeader, TOKEN_COOKIE);
+    if (token) {
+      const payload = await verifyJwt(token, c.env.JWT_SECRET, 'access');
+      return payload.sub;
+    }
+  } catch (err) {}
+  return null; // fallback
+}
 
 const schema = {
   users,
@@ -101,7 +117,11 @@ export type Env = {
   };
 };
 
-export const api = new OpenAPIHono<Env>();
+export const api = new OpenAPIHono<Env>().basePath('/api');
+api.onError((err, c) => {
+  console.error('HONO ERROR:', err);
+  return c.json({ error: err.message, stack: err.stack }, 500);
+});
 
 api.openapi(authLoginRoute, async (c) => {
   const { email, password } = c.req.valid('json');
@@ -179,6 +199,62 @@ api.openapi(adminCreateCardRoute, async (c) => {
   return c.json(card, 201);
 });
 
+// ========================
+// MEDIA
+// ========================
+function getR2Url(c: any) {
+  const origin = new URL(c.req.url).origin;
+  if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
+    return `${origin}/api/media/files`;
+  }
+  return c.env.R2_PUBLIC_URL || '';
+}
+
+api.get('/media/files/*', async (c) => {
+  const key = c.req.path.replace('/api/media/files/', '');
+  const object = await c.env.STORAGE.get(key);
+  if (!object) return c.notFound();
+
+  const headers = new Headers();
+  object.writeHttpMetadata(headers);
+  headers.set('etag', object.httpEtag);
+
+  return new Response(object.body as any, { headers });
+});
+
+api.openapi(uploadMediaRoute, async (c) => {
+  const input = c.req.valid('form');
+  const db = drizzle(c.env.DB, { schema });
+  const result = await uploadMedia(db, c.env.STORAGE, getR2Url(c), {
+    file: input.file,
+    title: input.title,
+    description: input.description,
+    uploadedBy: await getUserIdFromCookie(c),
+  });
+  return c.json(result as any, 201);
+});
+
+api.openapi(listMediaRoute, async (c) => {
+  const { page, limit } = c.req.valid('query');
+  const db = drizzle(c.env.DB, { schema });
+  const result = await listMedia(db, getR2Url(c), { limit, offset: (page - 1) * limit });
+  return c.json({ ...result, page, limit, totalPages: Math.ceil(result.total / limit) }, 200);
+});
+
+api.openapi(getMediaRoute, async (c) => {
+  const { id } = c.req.valid('param');
+  const db = drizzle(c.env.DB, { schema });
+  const result = await getMediaById(db, getR2Url(c), id);
+  return c.json(result, 200);
+});
+
+api.openapi(deleteMediaRoute, async (c) => {
+  const { id } = c.req.valid('param');
+  const db = drizzle(c.env.DB, { schema });
+  await deleteMedia(db, c.env.STORAGE, id, (await getUserIdFromCookie(c)) || 'admin', 'admin');
+  return c.json({ success: true } as any, 204);
+});
+
 api.openapi(adminUpdateCardRoute, async (c) => {
   const { id } = c.req.valid('param');
   const input = c.req.valid('json');
@@ -217,7 +293,7 @@ api.openapi(adminListProductsRoute, async (c) => {
 api.openapi(adminCreateProductRoute, async (c) => {
   const input = c.req.valid('json');
   const db = drizzle(c.env.DB, { schema });
-  const result = await createProduct(db, input, 'admin');
+  const result = await createProduct(db, input, (await getUserIdFromCookie(c)) as any);
   return c.json(result, 201);
 });
 api.openapi(adminUpdateProductRoute, async (c) => {
@@ -279,7 +355,7 @@ api.openapi(adminListPostsRoute, async (c) => {
 api.openapi(adminCreatePostRoute, async (c) => {
   const input = c.req.valid('json');
   const db = drizzle(c.env.DB, { schema });
-  const result = await createPost(db, input, 'admin');
+  const result = await createPost(db, input, (await getUserIdFromCookie(c)) as any);
   return c.json(result, 201);
 });
 api.openapi(adminUpdatePostRoute, async (c) => {
@@ -304,7 +380,7 @@ api.openapi(adminListCategoriesRoute, async (c) => {
 api.openapi(adminCreateCategoryRoute, async (c) => {
   const input = c.req.valid('json');
   const db = drizzle(c.env.DB, { schema });
-  const result = await createCategory(db, input, 'admin');
+  const result = await createCategory(db, input, (await getUserIdFromCookie(c)) as any);
   return c.json(result, 201);
 });
 api.openapi(adminUpdateCategoryRoute, async (c) => {
@@ -329,7 +405,7 @@ api.openapi(adminListBadgesRoute, async (c) => {
 api.openapi(adminCreateBadgeRoute, async (c) => {
   const input = c.req.valid('json');
   const db = drizzle(c.env.DB, { schema });
-  const result = await createBadge(db, input, 'admin');
+  const result = await createBadge(db, input, (await getUserIdFromCookie(c)) as any);
   return c.json(result, 201);
 });
 api.openapi(adminUpdateBadgeRoute, async (c) => {

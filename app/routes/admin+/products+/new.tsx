@@ -24,8 +24,8 @@ import { toast } from 'sonner';
 import xior from 'xior';
 import { getDb } from '~/.server/db';
 import { requireAuthSession } from '~/.server/guard';
-import { listBadges } from '~/.server/services/badge.service';
-import { listCategories } from '~/.server/services/category.service';
+import { listActiveBadges } from '~/.server/services/badge.service';
+import { listActiveCategories } from '~/.server/services/category.service';
 import { ImageUploader } from '~/components/admin/ImageUploader';
 import { RichTextEditor } from '~/components/admin/RichTextEditor';
 import { SeoPreview } from '~/components/admin/SeoPreview';
@@ -42,7 +42,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '~/comp
 export async function loader({ request, context }: Route.LoaderArgs) {
   await requireAuthSession(request, context);
   const db = getDb(context);
-  const [categories, badges] = await Promise.all([listCategories(db), listBadges(db)]);
+  const [categories, badges] = await Promise.all([listActiveCategories(db), listActiveBadges(db)]);
   return { categories, badges };
 }
 

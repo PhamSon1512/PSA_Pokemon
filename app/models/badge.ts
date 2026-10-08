@@ -8,6 +8,9 @@ export const badges = table('badges', {
     .$defaultFn(() => createId()),
   name: text('name').notNull().unique(),
   color: text('color'), // hex color e.g. #f59e0b
+  status: text('status', { enum: ['ACTIVE', 'INACTIVE'] })
+    .notNull()
+    .default('ACTIVE'),
   createdBy: text('created_by').references(() => users.id),
   createdAt: integer('created_at', { mode: 'timestamp' })
     .notNull()

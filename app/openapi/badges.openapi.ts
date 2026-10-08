@@ -4,8 +4,9 @@ const BadgeSchema = z.object({
   id: z.string(),
   name: z.string(),
   color: z.string().nullable(),
-  createdAt: z.string(),
-  updatedAt: z.string().nullable(),
+  status: z.enum(['ACTIVE', 'INACTIVE']),
+  createdAt: z.string().or(z.date()),
+  updatedAt: z.string().or(z.date()).nullable(),
 });
 
 export const adminListBadgesRoute = createRoute({
@@ -35,6 +36,7 @@ export const adminCreateBadgeRoute = createRoute({
           schema: z.object({
             name: z.string().min(1),
             color: z.string().optional().nullable(),
+            status: z.enum(['ACTIVE', 'INACTIVE']).optional(),
           }),
         },
       },
@@ -64,6 +66,7 @@ export const adminUpdateBadgeRoute = createRoute({
           schema: z.object({
             name: z.string().optional(),
             color: z.string().optional().nullable(),
+            status: z.enum(['ACTIVE', 'INACTIVE']).optional(),
           }),
         },
       },

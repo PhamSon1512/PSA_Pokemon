@@ -9,6 +9,9 @@ export const categories = table('categories', {
   name: text('name').notNull(),
   slug: text('slug').notNull().unique(),
   description: text('description'),
+  status: text('status', { enum: ['ACTIVE', 'INACTIVE'] })
+    .notNull()
+    .default('ACTIVE'),
   createdBy: text('created_by').references(() => users.id),
   createdAt: integer('created_at', { mode: 'timestamp' })
     .notNull()

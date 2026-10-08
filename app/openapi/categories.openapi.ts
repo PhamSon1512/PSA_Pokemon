@@ -5,8 +5,9 @@ const CategorySchema = z.object({
   name: z.string(),
   slug: z.string(),
   description: z.string().nullable(),
-  createdAt: z.string(),
-  updatedAt: z.string().nullable(),
+  status: z.enum(['ACTIVE', 'INACTIVE']),
+  createdAt: z.string().or(z.date()),
+  updatedAt: z.string().or(z.date()).nullable(),
 });
 
 export const adminListCategoriesRoute = createRoute({
@@ -37,6 +38,7 @@ export const adminCreateCategoryRoute = createRoute({
             name: z.string().min(1),
             slug: z.string().min(1),
             description: z.string().optional().nullable(),
+            status: z.enum(['ACTIVE', 'INACTIVE']).optional(),
           }),
         },
       },
@@ -67,6 +69,7 @@ export const adminUpdateCategoryRoute = createRoute({
             name: z.string().optional(),
             slug: z.string().optional(),
             description: z.string().optional().nullable(),
+            status: z.enum(['ACTIVE', 'INACTIVE']).optional(),
           }),
         },
       },

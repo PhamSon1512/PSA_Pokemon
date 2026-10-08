@@ -7,8 +7,8 @@ import { toast } from 'sonner';
 import xior from 'xior';
 import { getDb } from '~/.server/db';
 import { requireAuthSession } from '~/.server/guard';
-import { listBadges } from '~/.server/services/badge.service';
-import { listCategories } from '~/.server/services/category.service';
+import { listActiveBadges } from '~/.server/services/badge.service';
+import { listActiveCategories } from '~/.server/services/category.service';
 import { getProductById } from '~/.server/services/product.service';
 import { ImageUploader } from '~/components/admin/ImageUploader';
 import { RichTextEditor } from '~/components/admin/RichTextEditor';
@@ -28,7 +28,7 @@ export async function loader({ request, params, context }: Route.LoaderArgs) {
   const db = getDb(context);
   const product = await getProductById(db, params.id);
   if (!product) throw new Response('Sản phẩm không tồn tại', { status: 404 });
-  const [categories, badges] = await Promise.all([listCategories(db), listBadges(db)]);
+  const [categories, badges] = await Promise.all([listActiveCategories(db), listActiveBadges(db)]);
   return { product, categories, badges };
 }
 

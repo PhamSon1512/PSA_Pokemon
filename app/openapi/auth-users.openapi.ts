@@ -73,7 +73,7 @@ export const UpdateUserBodySchema = UserSelectSchema.pick({
 
 export const authLoginRoute = createRoute({
   method: 'post',
-  path: '/api/auth/login',
+  path: '/auth/login',
   tags: ['Auth'],
   summary: 'Login with email and password',
   security: [],
@@ -88,7 +88,7 @@ export const authLoginRoute = createRoute({
 
 export const authRegisterRoute = createRoute({
   method: 'post',
-  path: '/api/auth/register',
+  path: '/auth/register',
   tags: ['Auth'],
   summary: 'Register a new user',
   security: [],
@@ -103,7 +103,7 @@ export const authRegisterRoute = createRoute({
 
 export const authRefreshRoute = createRoute({
   method: 'post',
-  path: '/api/auth/refresh',
+  path: '/auth/refresh',
   tags: ['Auth'],
   summary: 'Issue a new access token using refresh token',
   security: [],
@@ -118,7 +118,7 @@ export const authRefreshRoute = createRoute({
 
 export const authMeRoute = createRoute({
   method: 'get',
-  path: '/api/auth/me',
+  path: '/auth/me',
   tags: ['Auth'],
   summary: 'Get current authenticated user profile',
   responses: {
@@ -131,7 +131,7 @@ export const authMeRoute = createRoute({
 
 export const listUsersRoute = createRoute({
   method: 'get',
-  path: '/api/users',
+  path: '/users',
   tags: ['Users'],
   summary: 'List all users — admin only',
   request: { query: PaginationQuerySchema },
@@ -152,7 +152,7 @@ export const listUsersRoute = createRoute({
 
 export const getUserRoute = createRoute({
   method: 'get',
-  path: '/api/users/{id}',
+  path: '/users/{id}',
   tags: ['Users'],
   summary: 'Get user by ID — self or admin',
   request: { params: IdParamSchema },
@@ -164,7 +164,7 @@ export const getUserRoute = createRoute({
 
 export const updateUserRoute = createRoute({
   method: 'patch',
-  path: '/api/users/{id}',
+  path: '/users/{id}',
   tags: ['Users'],
   summary: 'Update user — self or admin',
   request: {
@@ -179,7 +179,7 @@ export const updateUserRoute = createRoute({
 
 export const deleteUserRoute = createRoute({
   method: 'delete',
-  path: '/api/users/{id}',
+  path: '/users/{id}',
   tags: ['Users'],
   summary: 'Soft-delete user — admin only',
   request: { params: IdParamSchema },

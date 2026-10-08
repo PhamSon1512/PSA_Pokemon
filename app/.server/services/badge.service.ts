@@ -1,9 +1,33 @@
 import type { DrizzleDb } from '../db';
-import { count, desc, eq, isNull } from 'drizzle-orm';
+import { and, count, desc, eq, isNull } from 'drizzle-orm';
 import { badges } from '~/models';
 
 export async function listBadges(db: DrizzleDb) {
-  return db.select().from(badges).where(isNull(badges.deletedAt)).orderBy(desc(badges.createdAt));
+  return db
+    .select({
+      id: badges.id,
+      name: badges.name,
+      color: badges.color,
+      status: badges.status,
+      createdAt: badges.createdAt,
+    })
+    .from(badges)
+    .where(isNull(badges.deletedAt))
+    .orderBy(desc(badges.createdAt));
+}
+
+export async function listActiveBadges(db: DrizzleDb) {
+  return db
+    .select({
+      id: badges.id,
+      name: badges.name,
+      color: badges.color,
+      status: badges.status,
+      createdAt: badges.createdAt,
+    })
+    .from(badges)
+    .where(and(isNull(badges.deletedAt), eq(badges.status, 'ACTIVE')))
+    .orderBy(desc(badges.createdAt));
 }
 
 export async function createBadge(db: DrizzleDb, data: any, actorId: string) {

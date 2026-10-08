@@ -10,8 +10,10 @@ import {
   List,
   ListOrdered,
   Minus,
+  RefreshCw,
   RemoveFormatting,
   Strikethrough,
+  Trash2,
   Underline,
 } from 'lucide-react';
 import { Button } from '~/components/ui/button';
@@ -31,6 +33,198 @@ function stripHtml(html: string): string {
     .replace(/<[^>]*>/g, '')
     .replace(/&nbsp;/g, ' ')
     .trim();
+}
+
+/* Image Resizer Overlay */
+function ImageResizer({ img, onResizeEnd, onClear }: { img: HTMLImageElement; onResizeEnd: () => void; onClear: () => void }) {
+  const [rect, setRect] = useState({ top: 0, left: 0, width: 0, height: 0 });
+
+  const updateRect = useCallback(() => {
+    const parent = img.closest('.editor-wrapper');
+    if (!parent) return;
+    const parentRect = parent.getBoundingClientRect();
+    const imgRect = img.getBoundingClientRect();
+    setRect({
+      top: imgRect.top - parentRect.top + parent.scrollTop,
+      left: imgRect.left - parentRect.left + parent.scrollLeft,
+      width: imgRect.width,
+      height: imgRect.height,
+    });
+  }, [img]);
+
+  useEffect(() => {
+    updateRect();
+    const ro = new ResizeObserver(updateRect);
+    ro.observe(img);
+    const parent = img.closest('.editor-wrapper');
+    if (parent) {
+      parent.addEventListener('scroll', updateRect);
+      window.addEventListener('resize', updateRect);
+    }
+    return () => {
+      ro.disconnect();
+      if (parent) {
+        parent.removeEventListener('scroll', updateRect);
+        window.removeEventListener('resize', updateRect);
+      }
+    };
+  }, [img, updateRect]);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const startX = e.clientX;
+    const startWidth = img.offsetWidth;
+
+    const onMouseMove = (moveEvent: MouseEvent) => {
+      const deltaX = moveEvent.clientX - startX;
+      let newWidth = Math.max(50, startWidth + deltaX);
+      const parent = img.closest('.editor-wrapper');
+      if (parent) {
+        newWidth = Math.min(newWidth, parent.clientWidth - 32);
+      }
+      img.style.width = `${newWidth}px`;
+      img.style.height = 'auto';
+      updateRect();
+    };
+
+    const onMouseUp = () => {
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+      onResizeEnd();
+    };
+
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  };
+
+  const handleDelete = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    img.remove();
+    onResizeEnd();
+    onClear(); // Remove overlay
+  };
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleReplaceClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const src = ev.target?.result as string;
+      img.src = src;
+      img.alt = file.name;
+      onResizeEnd(); // save changes with new src
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        top: rect.top,
+        left: rect.left,
+        width: rect.width,
+        height: rect.height,
+        border: '2px solid #3b82f6',
+        pointerEvents: 'none',
+        zIndex: 50,
+      }}
+    >
+      <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleFileChange} />
+
+      {/* Container cho các nút công cụ góc trên phải */}
+      <div style={{ position: 'absolute', top: -14, right: -14, display: 'flex', gap: '4px', pointerEvents: 'auto' }}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              onMouseDown={handleReplaceClick}
+              style={{
+                backgroundColor: '#3b82f6',
+                color: 'white',
+                border: 'none',
+                borderRadius: '50%',
+                width: 28,
+                height: 28,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+              }}
+            >
+              <RefreshCw className="h-4 w-4" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="top" className="text-xs">
+            <p>Thay thế ảnh (Giữ nguyên kích thước)</p>
+          </TooltipContent>
+        </Tooltip>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              onMouseDown={handleDelete}
+              style={{
+                backgroundColor: '#ef4444',
+                color: 'white',
+                border: 'none',
+                borderRadius: '50%',
+                width: 28,
+                height: 28,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+              }}
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="top" className="text-xs">
+            <p>Xóa ảnh này</p>
+          </TooltipContent>
+        </Tooltip>
+      </div>
+
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div
+            onMouseDown={handleMouseDown}
+            style={{
+              position: 'absolute',
+              bottom: -6,
+              right: -6,
+              width: 12,
+              height: 12,
+              backgroundColor: '#fff',
+              border: '2px solid #3b82f6',
+              cursor: 'nwse-resize',
+              pointerEvents: 'auto',
+              borderRadius: '50%',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+            }}
+          />
+        </TooltipTrigger>
+        <TooltipContent side="bottom" className="text-xs">
+          <p>Kéo để thay đổi kích thước</p>
+        </TooltipContent>
+      </Tooltip>
+    </div>
+  );
 }
 
 /* Sticky toolbar button */
@@ -61,6 +255,7 @@ export function RichTextEditor({ value, onChange, error }: RichTextEditorProps) 
   const containerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [activeTab, setActiveTab] = useState<'visual' | 'html'>('visual');
+  const [resizingImg, setResizingImg] = useState<HTMLImageElement | null>(null);
   const [htmlValue, setHtmlValue] = useState(value || '');
   const [charCount, setCharCount] = useState(0);
 
@@ -94,6 +289,10 @@ export function RichTextEditor({ value, onChange, error }: RichTextEditorProps) 
       onChange(html);
       setCharCount(stripHtml(html).length);
     }
+  };
+
+  const handleKeyDown = () => {
+    setResizingImg(null);
   };
 
   /* Handle paste — allow images + formatted content */
@@ -148,19 +347,13 @@ export function RichTextEditor({ value, onChange, error }: RichTextEditorProps) 
     e.target.value = '';
   };
 
-  /* Click on image in editor — show resize hint */
+  /* Click on image in editor — select for resize */
   const handleEditorClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;
     if (target.tagName === 'IMG') {
-      const img = target as HTMLImageElement;
-      // Simple resize: prompt for width
-      const currentW = img.style.width || img.width.toString() || 'auto';
-      const newW = window.prompt('Chiều rộng ảnh (px hoặc %, để trống = tự động):', currentW);
-      if (newW !== null) {
-        img.style.width = newW ? (/^\d+$/.test(newW) ? `${newW}px` : newW) : 'auto';
-        img.style.height = 'auto';
-        handleInput();
-      }
+      setResizingImg(target as HTMLImageElement);
+    } else {
+      setResizingImg(null);
     }
   };
 
@@ -255,16 +448,34 @@ export function RichTextEditor({ value, onChange, error }: RichTextEditorProps) 
 
             {/* ── Visual editor ── */}
             <TabsContent value="visual" className="m-0 p-0">
-              <div
-                ref={editorRef}
-                contentEditable
-                suppressContentEditableWarning
-                onInput={handleInput}
-                onBlur={handleInput}
-                onPaste={handlePaste}
-                onClick={handleEditorClick}
-                className="min-h-[200px] p-4 text-sm focus:outline-none dark:text-gray-200 [&_a]:cursor-pointer [&_a]:text-blue-600 [&_a]:underline [&_h1]:mb-2 [&_h1]:text-xl [&_h1]:font-bold [&_h2]:mb-2 [&_h2]:text-lg [&_h2]:font-semibold [&_hr]:my-3 [&_hr]:border-gray-200 [&_img]:max-w-full [&_img]:cursor-pointer [&_img]:rounded-lg [&_img]:hover:ring-2 [&_img]:hover:ring-amber-400 [&_li]:mb-1 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-2 [&_ul]:list-disc [&_ul]:pl-5"
-              />
+              <div className="editor-wrapper relative">
+                <div
+                  ref={editorRef}
+                  contentEditable
+                  suppressContentEditableWarning
+                  onInput={handleInput}
+                  onBlur={handleInput}
+                  onKeyDown={handleKeyDown}
+                  onPaste={handlePaste}
+                  onClick={handleEditorClick}
+                  className="min-h-[200px] p-4 text-sm focus:outline-none dark:text-gray-200 [&_a]:cursor-pointer [&_a]:text-blue-600 [&_a]:underline [&_h1]:mb-2 [&_h1]:text-xl [&_h1]:font-bold [&_h2]:mb-2 [&_h2]:text-lg [&_h2]:font-semibold [&_hr]:my-3 [&_hr]:border-gray-200 [&_img]:max-w-full [&_img]:cursor-pointer [&_img]:rounded-lg [&_img]:hover:ring-2 [&_img]:hover:ring-amber-400 [&_li]:mb-1 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-2 [&_ul]:list-disc [&_ul]:pl-5"
+                />
+                {resizingImg && (
+                  <ImageResizer
+                    img={resizingImg}
+                    onClear={() => setResizingImg(null)}
+                    onResizeEnd={() => {
+                      // Need to push the HTML change without destroying the img reference
+                      if (editorRef.current) {
+                        const html = editorRef.current.innerHTML;
+                        setHtmlValue(html);
+                        onChange(html);
+                        setCharCount(stripHtml(html).length);
+                      }
+                    }}
+                  />
+                )}
+              </div>
               {/* Word count bar */}
               <div className="flex items-center justify-end border-t border-gray-100 px-3 py-1.5 dark:border-white/10">
                 <span className="text-muted-foreground text-[11px]">{charCount} ký tự</span>

@@ -1,9 +1,9 @@
 import type { Route } from './+types/_index';
 import type { DeleteProductTarget } from '~/components/admin/ProductDeleteDialog';
 import type { ProductDetailData } from '~/components/admin/ProductDetailDialog';
-import { useMemo, useState } from 'react';
-import { Link } from 'react-router';
-import { Edit, Eye, Plus, RefreshCw, Search, Trash2 } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router';
+import { ChevronLeft, ChevronRight, Edit, Eye, Plus, RefreshCw, Search, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import xior from 'xior';
 import { getDb } from '~/.server/db';
@@ -13,49 +13,104 @@ import { ProductDeleteDialog } from '~/components/admin/ProductDeleteDialog';
 import { ProductDetailDialog } from '~/components/admin/ProductDetailDialog';
 import { Badge } from '~/components/ui/badge';
 import { Button } from '~/components/ui/button';
-import { Card, CardContent, CardHeader } from '~/components/ui/card';
+import { Card, CardContent } from '~/components/ui/card';
 import { Input } from '~/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~/components/ui/select';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '~/components/ui/tooltip';
 
+/* ─────────────────────── Loader ─────────────────────── */
 export async function loader({ request, context }: Route.LoaderArgs) {
   await requireAuthSession(request, context);
   const db = getDb(context);
-  const products = await listAdminProducts(db);
-  return { products };
+  const url = new URL(request.url);
+  const page = Math.max(1, parseInt(url.searchParams.get('page') || '1', 10));
+  const pageSize = Math.min(100, Math.max(5, parseInt(url.searchParams.get('pageSize') || '20', 10)));
+  const search = url.searchParams.get('search') || '';
+  const category = url.searchParams.get('category') || 'all';
+  const status = url.searchParams.get('status') || 'all';
+  const sortBy = url.searchParams.get('sortBy') || 'newest';
+
+  const result = await listAdminProducts(db, { page, pageSize, search, category, status, sortBy });
+  return { ...result, search, category, status, sortBy };
 }
 
-// Helper to remove Vietnamese diacritics for search
-function normalizeText(str: string): string {
-  if (!str) return '';
-  return str
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[đĐ]/g, 'd')
-    .trim();
+/* ─────────────────────── Helpers ─────────────────────── */
+function getStatusBadge(status: string) {
+  switch (status) {
+    case 'ACTIVE':
+      return (
+        <Badge className="border-0 bg-emerald-50 text-xs font-semibold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400">
+          Đang bán
+        </Badge>
+      );
+    case 'DRAFT':
+      return (
+        <Badge variant="secondary" className="bg-gray-100 text-xs font-semibold text-gray-700 dark:bg-white/10 dark:text-gray-300">
+          Bản nháp
+        </Badge>
+      );
+    case 'SOLD_OUT':
+      return (
+        <Badge variant="destructive" className="text-xs font-semibold">
+          Hết hàng
+        </Badge>
+      );
+    default:
+      return <Badge variant="outline">{status}</Badge>;
+  }
 }
 
+/* ─────────────────────── Page ─────────────────────── */
 export default function AdminProductsList({ loaderData }: Route.ComponentProps) {
-  const { products: initialProducts } = loaderData;
+  const { products, total, page, pageSize, totalPages, search, category, status, sortBy } = loaderData as any;
 
-  // Filter & Search states
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [selectedStatus, setSelectedStatus] = useState<string>('all');
-  const [sortBy, setSortBy] = useState<string>('newest');
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
-  // Modal / Dialog States
+  // Local search state with debounce
+  const [localSearch, setLocalSearch] = useState(search);
+
+  // Debounce search navigation
+  useEffect(() => {
+    const t = setTimeout(() => {
+      const params = new URLSearchParams(searchParams);
+      if (localSearch) {
+        params.set('search', localSearch);
+      } else {
+        params.delete('search');
+      }
+      params.set('page', '1');
+      navigate(`?${params.toString()}`, { replace: true });
+    }, 350);
+    return () => clearTimeout(t);
+  }, [localSearch]);
+
+  const updateParam = useCallback(
+    (key: string, value: string) => {
+      const params = new URLSearchParams(searchParams);
+      if (value && value !== 'all') {
+        params.set(key, value);
+      } else {
+        params.delete(key);
+      }
+      params.set('page', '1');
+      navigate(`?${params.toString()}`);
+    },
+    [searchParams, navigate],
+  );
+
+  const goToPage = (p: number) => {
+    const params = new URLSearchParams(searchParams);
+    params.set('page', String(p));
+    navigate(`?${params.toString()}`);
+  };
+
+  // Modal states
   const [detailOpen, setDetailOpen] = useState(false);
   const [selectedProductDetail, setSelectedProductDetail] = useState<ProductDetailData | null>(null);
-
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deletingProduct, setDeletingProduct] = useState<DeleteProductTarget | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-
-  const handleRefresh = () => {
-    window.location.reload();
-  };
 
   const handleOpenDetail = (product: any) => {
     setSelectedProductDetail(product);
@@ -80,83 +135,16 @@ export default function AdminProductsList({ loaderData }: Route.ComponentProps) 
       await client.delete(`/admin/products/${id}`);
       toast.success('Đã ẩn (xóa mềm) sản phẩm thành công!');
       setDeleteOpen(false);
-      window.location.reload();
-    } catch (e) {
+      navigate(0); // revalidate
+    } catch {
       toast.error('Có lỗi xảy ra khi xóa sản phẩm');
     } finally {
       setIsDeleting(false);
     }
   };
 
-  // KPI Stats
-  const kpiStats = useMemo(() => {
-    const total = initialProducts.length;
-    const active = initialProducts.filter((p) => p.status === 'ACTIVE').length;
-    const lowStock = initialProducts.filter((p) => p.stock <= 5).length;
-    const totalInventoryValue = initialProducts.reduce((sum, p) => sum + p.price * p.stock, 0);
-
-    return { total, active, lowStock, totalInventoryValue };
-  }, [initialProducts]);
-
-  // Real-time accent-insensitive Vietnamese search & filtering
-  const filteredProducts = useMemo(() => {
-    const q = normalizeText(searchQuery);
-
-    return initialProducts
-      .filter((p) => {
-        if (q) {
-          const matchName = normalizeText(p.name).includes(q);
-          const matchSlug = normalizeText(p.slug).includes(q);
-          const matchCategory = normalizeText(p.category || '').includes(q);
-          const matchBadges = p.badges?.some((b) => normalizeText(b).includes(q));
-          if (!matchName && !matchSlug && !matchCategory && !matchBadges) return false;
-        }
-
-        if (selectedCategory !== 'all' && p.category !== selectedCategory) {
-          return false;
-        }
-
-        if (selectedStatus !== 'all' && p.status !== selectedStatus) {
-          return false;
-        }
-
-        return true;
-      })
-      .sort((a, b) => {
-        if (sortBy === 'price-asc') return a.price - b.price;
-        if (sortBy === 'price-desc') return b.price - a.price;
-        if (sortBy === 'stock-desc') return b.stock - a.stock;
-        return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
-      });
-  }, [initialProducts, searchQuery, selectedCategory, selectedStatus, sortBy]);
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'ACTIVE':
-        return (
-          <Badge className="border-0 bg-emerald-50 text-xs font-semibold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400">
-            Đang bán
-          </Badge>
-        );
-      case 'DRAFT':
-        return (
-          <Badge
-            variant="secondary"
-            className="bg-gray-100 text-xs font-semibold text-gray-700 dark:bg-white/10 dark:text-gray-300"
-          >
-            Bản nháp
-          </Badge>
-        );
-      case 'SOLD_OUT':
-        return (
-          <Badge variant="destructive" className="text-xs font-semibold">
-            Hết hàng
-          </Badge>
-        );
-      default:
-        return <Badge variant="outline">{status}</Badge>;
-    }
-  };
+  const pageStart = total === 0 ? 0 : (page - 1) * pageSize + 1;
+  const pageEnd = Math.min(page * pageSize, total);
 
   return (
     <TooltipProvider delayDuration={200}>
@@ -179,7 +167,7 @@ export default function AdminProductsList({ loaderData }: Route.ComponentProps) 
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={handleRefresh}
+                  onClick={() => navigate(0)}
                   className="h-9 w-9 cursor-pointer rounded-lg border border-gray-200 bg-white text-gray-700 transition-colors hover:border-amber-500 hover:bg-amber-50 hover:text-amber-600 dark:border-white/10 dark:bg-white/5 dark:text-gray-300 dark:hover:bg-amber-500/10 dark:hover:text-amber-400"
                 >
                   <RefreshCw className="h-4 w-4" />
@@ -201,57 +189,25 @@ export default function AdminProductsList({ loaderData }: Route.ComponentProps) 
           </div>
         </div>
 
-        {/* Clean KPI Overview */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Card className="rounded-xl border-0 shadow-sm dark:bg-[#161b22]">
-            <CardContent className="p-4">
-              <div className="text-muted-foreground text-xs font-medium">Tổng sản phẩm</div>
-              <div className="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{kpiStats.total}</div>
-            </CardContent>
-          </Card>
-
-          <Card className="rounded-xl border-0 shadow-sm dark:bg-[#161b22]">
-            <CardContent className="p-4">
-              <div className="text-muted-foreground text-xs font-medium">Đang bán công khai</div>
-              <div className="mt-1 text-2xl font-bold text-emerald-600 dark:text-emerald-400">{kpiStats.active}</div>
-            </CardContent>
-          </Card>
-
-          <Card className="rounded-xl border-0 shadow-sm dark:bg-[#161b22]">
-            <CardContent className="p-4">
-              <div className="text-muted-foreground text-xs font-medium">Cảnh báo tồn kho thấp</div>
-              <div className="mt-1 text-2xl font-bold text-red-600 dark:text-red-500">{kpiStats.lowStock}</div>
-            </CardContent>
-          </Card>
-
-          <Card className="rounded-xl border-0 shadow-sm dark:bg-[#161b22]">
-            <CardContent className="p-4">
-              <div className="text-muted-foreground text-xs font-medium">Giá trị kho ước tính</div>
-              <div className="mt-1 text-xl font-bold text-gray-900 dark:text-white">
-                {kpiStats.totalInventoryValue.toLocaleString('vi-VN')}₫
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
         {/* Table & Controls */}
         <Card className="overflow-hidden rounded-xl border-0 shadow-sm dark:bg-[#161b22]">
+          {/* Filters row */}
           <div className="bg-gray-50/50 p-4 dark:bg-white/5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              {/* Auto Search Input */}
+              {/* Search */}
               <div className="group relative w-full max-w-sm sm:w-64 sm:flex-1">
                 <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 transition-colors group-focus-within:text-amber-500 group-hover:text-amber-500" />
                 <Input
-                  placeholder="Tìm theo tên, slug, nhãn..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="h-9 rounded-lg pl-9 text-xs transition-colors hover:border-amber-500 focus-visible:border-amber-500 focus-visible:ring-amber-500/20"
+                  placeholder="Tìm theo tên, slug, danh mục..."
+                  value={localSearch}
+                  onChange={(e) => setLocalSearch(e.target.value)}
+                  className="h-9 rounded-lg pl-9 text-xs"
                 />
               </div>
 
-              {/* Enhanced Dropdowns sitting on same row */}
-              <div className="flex items-center gap-2 overflow-x-auto">
-                <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+              <div className="flex flex-wrap items-center gap-2">
+                {/* Category filter */}
+                <Select value={category} onValueChange={(v) => updateParam('category', v)}>
                   <SelectTrigger className="h-9 w-[190px] rounded-lg text-xs hover:border-amber-500 focus:ring-amber-500">
                     <SelectValue placeholder="Tất cả danh mục" />
                   </SelectTrigger>
@@ -280,8 +236,9 @@ export default function AdminProductsList({ loaderData }: Route.ComponentProps) 
                   </SelectContent>
                 </Select>
 
-                <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                  <SelectTrigger className="h-9 w-[170px] rounded-lg text-xs hover:border-amber-500 focus:ring-amber-500">
+                {/* Status filter */}
+                <Select value={status} onValueChange={(v) => updateParam('status', v)}>
+                  <SelectTrigger className="h-9 w-[165px] rounded-lg text-xs hover:border-amber-500 focus:ring-amber-500">
                     <SelectValue placeholder="Tất cả trạng thái" />
                   </SelectTrigger>
                   <SelectContent>
@@ -300,8 +257,9 @@ export default function AdminProductsList({ loaderData }: Route.ComponentProps) 
                   </SelectContent>
                 </Select>
 
-                <Select value={sortBy} onValueChange={setSortBy}>
-                  <SelectTrigger className="h-9 w-[175px] rounded-lg text-xs hover:border-amber-500 focus:ring-amber-500">
+                {/* Sort */}
+                <Select value={sortBy} onValueChange={(v) => updateParam('sortBy', v)}>
+                  <SelectTrigger className="h-9 w-[165px] rounded-lg text-xs hover:border-amber-500 focus:ring-amber-500">
                     <SelectValue placeholder="Sắp xếp" />
                   </SelectTrigger>
                   <SelectContent>
@@ -316,6 +274,24 @@ export default function AdminProductsList({ loaderData }: Route.ComponentProps) 
                     </SelectItem>
                     <SelectItem value="stock-desc" className="cursor-pointer text-xs">
                       Tồn kho nhiều nhất
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+
+                {/* Page size */}
+                <Select value={String(pageSize)} onValueChange={(v) => updateParam('pageSize', v)}>
+                  <SelectTrigger className="h-9 w-[110px] rounded-lg text-xs hover:border-amber-500 focus:ring-amber-500">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="10" className="cursor-pointer text-xs">
+                      10 / trang
+                    </SelectItem>
+                    <SelectItem value="20" className="cursor-pointer text-xs">
+                      20 / trang
+                    </SelectItem>
+                    <SelectItem value="50" className="cursor-pointer text-xs">
+                      50 / trang
                     </SelectItem>
                   </SelectContent>
                 </Select>
@@ -338,7 +314,7 @@ export default function AdminProductsList({ loaderData }: Route.ComponentProps) 
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 bg-white dark:divide-white/5 dark:bg-transparent">
-                  {filteredProducts.map((product, index) => {
+                  {products.map((product: any, index: number) => {
                     const coverImage = product.images?.[0] || product.image;
                     const discountPercent =
                       product.comparePrice && product.comparePrice > product.price
@@ -347,10 +323,8 @@ export default function AdminProductsList({ loaderData }: Route.ComponentProps) 
 
                     return (
                       <tr key={product.id} className="transition-colors hover:bg-gray-50/80 dark:hover:bg-white/5">
-                        {/* Column 0: STT */}
-                        <td className="text-muted-foreground px-4 py-3 text-center font-mono font-medium">{index + 1}</td>
+                        <td className="text-muted-foreground px-4 py-3 text-center font-mono font-medium">{pageStart + index}</td>
 
-                        {/* Column 1: Image & Name */}
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-3">
                             <div
@@ -365,7 +339,6 @@ export default function AdminProductsList({ loaderData }: Route.ComponentProps) 
                                 </div>
                               )}
                             </div>
-
                             <div className="min-w-0">
                               <h3
                                 onClick={() => handleOpenDetail(product)}
@@ -379,7 +352,6 @@ export default function AdminProductsList({ loaderData }: Route.ComponentProps) 
                           </div>
                         </td>
 
-                        {/* Column 2: Category & Badges */}
                         <td className="px-4 py-3">
                           <div className="space-y-1">
                             <div className="font-semibold text-gray-700 dark:text-gray-300">
@@ -387,7 +359,7 @@ export default function AdminProductsList({ loaderData }: Route.ComponentProps) 
                             </div>
                             {product.badges && product.badges.length > 0 && (
                               <div className="flex flex-wrap gap-1">
-                                {product.badges.slice(0, 2).map((b, i) => (
+                                {product.badges.slice(0, 2).map((b: string, i: number) => (
                                   <span
                                     key={i}
                                     className="rounded bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 dark:bg-amber-500/10 dark:text-amber-400"
@@ -403,7 +375,6 @@ export default function AdminProductsList({ loaderData }: Route.ComponentProps) 
                           </div>
                         </td>
 
-                        {/* Column 3: Price */}
                         <td className="px-4 py-3">
                           <div className="font-bold text-red-600 dark:text-red-500">{product.price.toLocaleString('vi-VN')}₫</div>
                           {product.comparePrice && product.comparePrice > product.price && (
@@ -414,16 +385,13 @@ export default function AdminProductsList({ loaderData }: Route.ComponentProps) 
                           )}
                         </td>
 
-                        {/* Column 4: Stock & Sales */}
                         <td className="px-4 py-3">
                           <div className="font-semibold text-gray-900 dark:text-white">Tồn: {product.stock}</div>
                           <div className="text-muted-foreground text-[11px]">Đã bán: {product.sold}</div>
                         </td>
 
-                        {/* Column 5: Status */}
                         <td className="px-4 py-3">{getStatusBadge(product.status)}</td>
 
-                        {/* Column 6: Actions with Tooltips */}
                         <td className="px-4 py-3 text-right">
                           <div className="flex items-center justify-end gap-1">
                             <Tooltip>
@@ -481,9 +449,9 @@ export default function AdminProductsList({ loaderData }: Route.ComponentProps) 
                     );
                   })}
 
-                  {filteredProducts.length === 0 && (
+                  {products.length === 0 && (
                     <tr>
-                      <td colSpan={7} className="text-muted-foreground py-12 text-center">
+                      <td colSpan={7} className="text-muted-foreground py-16 text-center">
                         Không tìm thấy sản phẩm phù hợp.
                       </td>
                     </tr>
@@ -491,13 +459,79 @@ export default function AdminProductsList({ loaderData }: Route.ComponentProps) 
                 </tbody>
               </table>
             </div>
+
+            {/* ── Pagination Footer ── */}
+            <div className="flex flex-col items-center justify-between gap-3 border-t border-gray-100 px-4 py-3 sm:flex-row dark:border-white/10">
+              {/* Info */}
+              <p className="text-muted-foreground text-xs">
+                {total === 0 ? (
+                  'Không có sản phẩm nào'
+                ) : (
+                  <>
+                    Hiển thị{' '}
+                    <span className="font-semibold text-gray-700 dark:text-white">
+                      {pageStart}–{pageEnd}
+                    </span>{' '}
+                    trong tổng số <span className="font-semibold text-gray-700 dark:text-white">{total}</span> sản phẩm
+                  </>
+                )}
+              </p>
+
+              {/* Navigation */}
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 rounded-lg border border-gray-200 dark:border-white/10"
+                  disabled={page <= 1 || total === 0}
+                  onClick={() => goToPage(page - 1)}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+
+                {/* Page numbers — show at least page 1 */}
+                {Array.from({ length: Math.max(1, Math.min(5, totalPages)) }, (_, i) => {
+                  let p: number;
+                  if (totalPages <= 5) {
+                    p = i + 1;
+                  } else if (page <= 3) {
+                    p = i + 1;
+                  } else if (page >= totalPages - 2) {
+                    p = totalPages - 4 + i;
+                  } else {
+                    p = page - 2 + i;
+                  }
+                  return (
+                    <Button
+                      key={p}
+                      variant={p === page ? 'default' : 'ghost'}
+                      size="icon"
+                      className={`h-8 w-8 rounded-lg text-xs ${
+                        p === page ? 'bg-amber-500 text-white hover:bg-amber-600' : 'border border-gray-200 dark:border-white/10'
+                      }`}
+                      disabled={total === 0}
+                      onClick={() => goToPage(p)}
+                    >
+                      {p}
+                    </Button>
+                  );
+                })}
+
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 rounded-lg border border-gray-200 dark:border-white/10"
+                  disabled={page >= totalPages || total === 0}
+                  onClick={() => goToPage(page + 1)}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
-        {/* Product Detail Dialog */}
         <ProductDetailDialog open={detailOpen} onOpenChange={setDetailOpen} product={selectedProductDetail} />
-
-        {/* Soft Delete Warning Modal */}
         <ProductDeleteDialog
           open={deleteOpen}
           onOpenChange={setDeleteOpen}

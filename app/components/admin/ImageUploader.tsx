@@ -146,7 +146,7 @@ export function ImageUploader({ images, onChange, maxImages = 5, error }: ImageU
           className={`border-line flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed p-6 transition-all ${
             isDragging
               ? 'scale-[1.01] border-amber-500 bg-amber-500/10'
-              : 'bg-gray-50/50 hover:bg-gray-100/80 dark:bg-white/5 dark:hover:bg-white/10'
+              : 'bg-gray-50/50 hover:border-amber-500 hover:bg-amber-500/5 dark:bg-white/5 dark:hover:bg-amber-500/10'
           }`}
         >
           <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFileSelect} />

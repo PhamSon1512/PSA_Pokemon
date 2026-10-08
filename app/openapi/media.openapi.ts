@@ -48,7 +48,7 @@ export const UploadMediaMetaSchema = UpdateMediaBodySchema;
 
 export const listMediaRoute = createRoute({
   method: 'get',
-  path: '/api/media',
+  path: '/media',
   tags: ['Media'],
   summary: 'List media files',
   request: { query: PaginationQuerySchema },
@@ -69,7 +69,7 @@ export const listMediaRoute = createRoute({
 
 export const uploadMediaRoute = createRoute({
   method: 'post',
-  path: '/api/media',
+  path: '/media',
   tags: ['Media'],
   summary: 'Upload a file to R2 storage',
   request: {
@@ -78,7 +78,9 @@ export const uploadMediaRoute = createRoute({
       content: {
         'multipart/form-data': {
           schema: z.object({
-            file: z.string().openapi({ format: 'binary', description: 'File to upload' }),
+            file: z
+              .custom<File>((v) => v instanceof File)
+              .openapi({ type: 'string', format: 'binary', description: 'File to upload' }),
             title: z.string().max(255).optional(),
             description: z.string().max(2000).optional(),
           }),
@@ -94,7 +96,7 @@ export const uploadMediaRoute = createRoute({
 
 export const getMediaRoute = createRoute({
   method: 'get',
-  path: '/api/media/{id}',
+  path: '/media/{id}',
   tags: ['Media'],
   summary: 'Get media item by ID',
   request: { params: IdParamSchema },
@@ -106,7 +108,7 @@ export const getMediaRoute = createRoute({
 
 export const updateMediaRoute = createRoute({
   method: 'patch',
-  path: '/api/media/{id}',
+  path: '/media/{id}',
   tags: ['Media'],
   summary: 'Update media metadata',
   request: {
@@ -121,7 +123,7 @@ export const updateMediaRoute = createRoute({
 
 export const deleteMediaRoute = createRoute({
   method: 'delete',
-  path: '/api/media/{id}',
+  path: '/media/{id}',
   tags: ['Media'],
   summary: 'Delete media item from R2 and database',
   request: { params: IdParamSchema },
@@ -133,7 +135,7 @@ export const deleteMediaRoute = createRoute({
 
 export const batchDeleteMediaRoute = createRoute({
   method: 'post',
-  path: '/api/media/batch-delete',
+  path: '/media/batch-delete',
   tags: ['Media'],
   summary: 'Batch delete media items by IDs',
   request: {
