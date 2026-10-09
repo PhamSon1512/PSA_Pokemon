@@ -27,6 +27,7 @@ import { requireAuthSession } from '~/.server/guard';
 import { listActiveBadges } from '~/.server/services/badge.service';
 import { listActiveCategories } from '~/.server/services/category.service';
 import { ImageUploader } from '~/components/admin/ImageUploader';
+import { ProductVariantsManager } from '~/components/admin/ProductVariantsManager';
 import { RichTextEditor } from '~/components/admin/RichTextEditor';
 import { SeoPreview } from '~/components/admin/SeoPreview';
 import { Badge } from '~/components/ui/badge';
@@ -58,6 +59,18 @@ export interface CreateProductFormValues {
   status: 'ACTIVE' | 'DRAFT' | 'SOLD_OUT';
   badges: string[];
   images: string[];
+  hasVariants: boolean;
+  variants: Array<{
+    key: string;
+    name: string;
+    sku: string;
+    price: number | undefined;
+    stock: number;
+    image: string;
+    condition: string;
+    language: string;
+    finish: string;
+  }>;
   metaTitle: string;
   metaDescription: string;
   keywords: string;
@@ -138,6 +151,8 @@ export default function NewProductPage({ loaderData }: Route.ComponentProps) {
       status: 'ACTIVE',
       badges: [],
       images: [],
+      hasVariants: false,
+      variants: [],
       metaTitle: '',
       metaDescription: '',
       keywords: '',
@@ -146,8 +161,12 @@ export default function NewProductPage({ loaderData }: Route.ComponentProps) {
       name: (v) => (!v.trim() ? 'Tên sản phẩm không được để trống' : v.trim().length < 3 ? 'Tên sản phẩm tối thiểu 3 ký tự' : null),
       slug: (v) => (!v.trim() ? 'Slug không được để trống' : null),
       price: (v) => (!v || v <= 0 ? 'Giá bán phải lớn hơn 0' : null),
-      stock: (v) => (!v || v <= 0 ? 'Số lượng tồn kho phải lớn hơn 0' : null),
+      stock: (v) => (v === undefined || v < 0 ? 'Số lượng tồn kho không hợp lệ' : null),
       images: (v) => (v.length === 0 ? 'Vui lòng tải lên ít nhất 1 hình ảnh' : null),
+      variants: {
+        name: (v, values) => (values.hasVariants && !v?.trim() ? 'Tên biến thể bắt buộc' : null),
+        price: (v, values) => (values.hasVariants && (!v || v <= 0) ? 'Giá bán bắt buộc' : null),
+      },
     },
   });
 
@@ -188,6 +207,17 @@ export default function NewProductPage({ loaderData }: Route.ComponentProps) {
         badges: values.badges,
         image: values.images[0] || null,
         images: values.images,
+        hasVariants: values.hasVariants,
+        seoTitle: values.metaTitle || null,
+        seoDescription: values.metaDescription || null,
+        seoKeywords: values.keywords || null,
+        variants: values.hasVariants
+          ? values.variants.map((v) => ({
+              ...v,
+              price: Number(v.price),
+              stock: Number(v.stock),
+            }))
+          : [],
       };
       await xior.create({ baseURL: '/api' }).post('/admin/products', payload);
       toast.success('Tạo mới sản phẩm thành công!');
@@ -415,6 +445,16 @@ export default function NewProductPage({ loaderData }: Route.ComponentProps) {
               </div>
             </Panel>
 
+            {/* 3.5 Biến thể */}
+            <ProductVariantsManager
+              productName={form.values.name}
+              hasVariants={form.values.hasVariants}
+              onHasVariantsChange={(val) => form.setFieldValue('hasVariants', val)}
+              variants={form.values.variants}
+              onVariantsChange={(val) => form.setFieldValue('variants', val)}
+              getVariantError={(index, field) => form.errors[`variants.${index}.${field}`]}
+            />
+
             {/* 4. SEO */}
             <Panel title="Tối ưu hóa tìm kiếm (SEO)">
               <SeoPreview
@@ -431,7 +471,7 @@ export default function NewProductPage({ loaderData }: Route.ComponentProps) {
           </div>
 
           {/* ════ RIGHT COLUMN (1/3) ════ */}
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-4 lg:sticky lg:top-6 lg:self-start">
             {/* Trạng thái */}
             <Panel title="Trạng thái xuất bản">
               <div className="flex flex-col gap-3">

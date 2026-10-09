@@ -1,6 +1,7 @@
-import { and, count, desc, eq, isNull, like, or } from 'drizzle-orm';
+import { and, count, desc, eq, inArray, isNull, like, or } from 'drizzle-orm';
 import { type DrizzleD1Database } from 'drizzle-orm/d1';
 import { products } from '~/models/product';
+import { productVariants } from '~/models/product_variant';
 
 export interface ListAdminProductsParams {
   page?: number;
@@ -11,13 +12,31 @@ export interface ListAdminProductsParams {
   sortBy?: string;
 }
 
+async function attachVariants(db: DrizzleD1Database<any>, product: any) {
+  if (!product || !product.hasVariants) return product;
+  const variants = await db
+    .select()
+    .from(productVariants)
+    .where(and(eq(productVariants.productId, product.id), isNull(productVariants.deletedAt)));
+
+  const activeVariants = variants || [];
+  let minVariantPrice, maxVariantPrice;
+  if (activeVariants.length > 0) {
+    const prices = activeVariants.map((v) => v.price);
+    minVariantPrice = Math.min(...prices);
+    maxVariantPrice = Math.max(...prices);
+  }
+
+  return { ...product, variants: activeVariants, minVariantPrice, maxVariantPrice };
+}
+
 export async function getProductBySlug(db: DrizzleD1Database<any>, slug: string) {
   const [product] = await db
     .select()
     .from(products)
     .where(and(eq(products.slug, slug), isNull(products.deletedAt)))
     .limit(1);
-  return product;
+  return attachVariants(db, product);
 }
 
 export async function getProductById(db: DrizzleD1Database<any>, id: string) {
@@ -26,7 +45,7 @@ export async function getProductById(db: DrizzleD1Database<any>, id: string) {
     .from(products)
     .where(and(eq(products.id, id), isNull(products.deletedAt)))
     .limit(1);
-  return product;
+  return attachVariants(db, product);
 }
 
 export async function getPublicProducts(db: DrizzleD1Database<any>) {
@@ -68,8 +87,10 @@ export async function listAdminProducts(db: DrizzleD1Database<any>, params: List
     db.select({ total: count() }).from(products).where(where),
   ]);
 
+  const productsWithVariants = await Promise.all(rows.map(async (row) => await attachVariants(db, row)));
+
   return {
-    products: rows,
+    products: productsWithVariants,
     total,
     page,
     pageSize,
@@ -78,20 +99,73 @@ export async function listAdminProducts(db: DrizzleD1Database<any>, params: List
 }
 
 export async function createProduct(db: DrizzleD1Database<any>, data: any, actorId: string) {
+  const { variants, minVariantPrice, maxVariantPrice, ...productData } = data;
   const [product] = await db
     .insert(products)
-    .values({ ...data, createdBy: actorId })
+    .values({ ...productData, createdBy: actorId })
     .returning();
-  return product;
+
+  if (product.hasVariants && variants && variants.length > 0) {
+    const variantValues = variants.map((v: any) => ({
+      ...v,
+      productId: product.id,
+      createdBy: actorId,
+    }));
+    await db.insert(productVariants).values(variantValues);
+  }
+
+  return attachVariants(db, product);
 }
 
-export async function updateProduct(db: DrizzleD1Database<any>, id: string, data: any) {
+export async function updateProduct(db: DrizzleD1Database<any>, id: string, data: any, actorId?: string) {
+  const { variants, minVariantPrice, maxVariantPrice, ...productData } = data;
+
   const [product] = await db
     .update(products)
-    .set({ ...data, updatedAt: new Date() })
+    .set({ ...productData, updatedAt: new Date() })
     .where(eq(products.id, id))
     .returning();
-  return product;
+
+  if (product.hasVariants && variants) {
+    // Soft delete existing variants not in the new list, update existing, insert new
+    const existing = await db
+      .select()
+      .from(productVariants)
+      .where(and(eq(productVariants.productId, id), isNull(productVariants.deletedAt)));
+
+    const incomingIds = variants.map((v: any) => v.id).filter(Boolean);
+    const toDelete = existing.filter((e) => !incomingIds.includes(e.id));
+
+    if (toDelete.length > 0) {
+      await db
+        .update(productVariants)
+        .set({ deletedAt: new Date() })
+        .where(
+          inArray(
+            productVariants.id,
+            toDelete.map((d) => d.id),
+          ),
+        );
+    }
+
+    for (const v of variants) {
+      if (v.id) {
+        const { id: vId, ...vData } = v;
+        await db
+          .update(productVariants)
+          .set({ ...vData, updatedAt: new Date() })
+          .where(eq(productVariants.id, vId));
+      } else {
+        await db.insert(productVariants).values({
+          ...v,
+          productId: id,
+          createdBy: actorId,
+        });
+      }
+    }
+  }
+
+  return attachVariants(db, product);
 }
 
 export async function deleteProduct(db: DrizzleD1Database<any>, id: string) {

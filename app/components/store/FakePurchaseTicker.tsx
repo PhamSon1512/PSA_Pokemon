@@ -19,14 +19,16 @@ type Purchase = {
   quantity: number;
 };
 
-export function FakePurchaseTicker() {
+export function FakePurchaseTicker({ products = [] }: { products?: any[] }) {
   const [purchases, setPurchases] = useState<Purchase[]>([]);
 
   useEffect(() => {
     let timeoutId: NodeJS.Timeout;
 
+    const sourceProducts = products.length > 0 ? products : MOCK_PRODUCTS;
+
     const addPurchase = () => {
-      const product = MOCK_PRODUCTS[Math.floor(Math.random() * MOCK_PRODUCTS.length)];
+      const product = sourceProducts[Math.floor(Math.random() * sourceProducts.length)];
 
       const times = ['Vừa xong', '1 phút trước', '2 phút trước'];
 

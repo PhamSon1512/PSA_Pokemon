@@ -1,5 +1,5 @@
 import { Navigate, NavLink, Outlet } from 'react-router';
-import { Bell, LayoutDashboard, LogOut, Package, Search, ShieldCheck, Users } from 'lucide-react';
+import { Bell, ExternalLink, LayoutDashboard, LogOut, Package, Search, ShieldCheck, Users } from 'lucide-react';
 import { useSnapshot } from 'valtio';
 import { Avatar, AvatarFallback, AvatarImage } from '~/components/ui/avatar';
 import { ModeToggle } from '~/components/ui/mode-toggle';
@@ -26,11 +26,10 @@ export default function AdminLayout() {
     { to: '/admin/badges', label: 'Nhãn nổi bật', icon: <ShieldCheck className="h-4 w-4" />, end: false },
     { to: '/admin/certificates', label: 'Chứng nhận', icon: <ShieldCheck className="h-4 w-4" />, end: false },
     { to: '/admin/orders', label: 'Đơn hàng', icon: <Users className="h-4 w-4" />, end: false },
-    { to: '/', label: 'Quay lại Cửa hàng', icon: <LayoutDashboard className="h-4 w-4" />, end: true },
   ];
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#f3f4f6]">
+    <div className="fixed inset-0 flex overflow-hidden bg-[#f3f4f6]">
       {/* Sidebar */}
       <aside className="flex hidden h-screen w-[260px] flex-col bg-[#111827] text-white md:flex">
         <div className="flex h-[76px] items-center border-b border-white/10 px-6">
@@ -45,7 +44,7 @@ export default function AdminLayout() {
           </div>
         </div>
 
-        <nav className="flex-1 space-y-1 overflow-y-auto p-4">
+        <nav className="custom-scrollbar flex-1 space-y-1 overflow-y-auto p-4">
           {menu.map((item) => (
             <NavLink
               key={item.to}
@@ -63,6 +62,15 @@ export default function AdminLayout() {
         </nav>
 
         <div className="border-t border-white/10 p-4">
+          <a
+            href="/"
+            target="_blank"
+            rel="noreferrer"
+            className="mb-4 flex w-full items-center justify-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm font-bold text-amber-400 transition-colors hover:bg-amber-500/20 hover:text-amber-300"
+          >
+            <ExternalLink className="h-4 w-4" /> Xem cửa hàng Live
+          </a>
+
           <div className="mb-4 flex items-center gap-3 px-2">
             <Avatar className="h-9 w-9">
               <AvatarImage src={snap.user.avatar?.startsWith('http') ? snap.user.avatar : undefined} />

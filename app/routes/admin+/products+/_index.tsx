@@ -277,24 +277,6 @@ export default function AdminProductsList({ loaderData }: Route.ComponentProps) 
                     </SelectItem>
                   </SelectContent>
                 </Select>
-
-                {/* Page size */}
-                <Select value={String(pageSize)} onValueChange={(v) => updateParam('pageSize', v)}>
-                  <SelectTrigger className="h-9 w-[110px] rounded-lg text-xs hover:border-amber-500 focus:ring-amber-500">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="10" className="cursor-pointer text-xs">
-                      10 / trang
-                    </SelectItem>
-                    <SelectItem value="20" className="cursor-pointer text-xs">
-                      20 / trang
-                    </SelectItem>
-                    <SelectItem value="50" className="cursor-pointer text-xs">
-                      50 / trang
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
               </div>
             </div>
           </div>
@@ -478,54 +460,74 @@ export default function AdminProductsList({ loaderData }: Route.ComponentProps) 
               </p>
 
               {/* Navigation */}
-              <div className="flex items-center gap-1">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 rounded-lg border border-gray-200 dark:border-white/10"
-                  disabled={page <= 1 || total === 0}
-                  onClick={() => goToPage(page - 1)}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
+              <div className="flex items-center gap-2">
+                {/* Page size */}
+                <Select value={String(pageSize)} onValueChange={(v) => updateParam('pageSize', v)}>
+                  <SelectTrigger className="h-8 w-[100px] rounded-lg text-[11px] hover:border-amber-500 focus:ring-amber-500 dark:border-white/10 dark:bg-white/5">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="10" className="cursor-pointer text-xs">
+                      10 / trang
+                    </SelectItem>
+                    <SelectItem value="20" className="cursor-pointer text-xs">
+                      20 / trang
+                    </SelectItem>
+                    <SelectItem value="50" className="cursor-pointer text-xs">
+                      50 / trang
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
 
-                {/* Page numbers — show at least page 1 */}
-                {Array.from({ length: Math.max(1, Math.min(5, totalPages)) }, (_, i) => {
-                  let p: number;
-                  if (totalPages <= 5) {
-                    p = i + 1;
-                  } else if (page <= 3) {
-                    p = i + 1;
-                  } else if (page >= totalPages - 2) {
-                    p = totalPages - 4 + i;
-                  } else {
-                    p = page - 2 + i;
-                  }
-                  return (
-                    <Button
-                      key={p}
-                      variant={p === page ? 'default' : 'ghost'}
-                      size="icon"
-                      className={`h-8 w-8 rounded-lg text-xs ${
-                        p === page ? 'bg-amber-500 text-white hover:bg-amber-600' : 'border border-gray-200 dark:border-white/10'
-                      }`}
-                      disabled={total === 0}
-                      onClick={() => goToPage(p)}
-                    >
-                      {p}
-                    </Button>
-                  );
-                })}
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 rounded-lg border border-gray-200 dark:border-white/10"
+                    disabled={page <= 1 || total === 0}
+                    onClick={() => goToPage(page - 1)}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
 
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 rounded-lg border border-gray-200 dark:border-white/10"
-                  disabled={page >= totalPages || total === 0}
-                  onClick={() => goToPage(page + 1)}
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
+                  {/* Page numbers — show at least page 1 */}
+                  {Array.from({ length: Math.max(1, Math.min(5, totalPages)) }, (_, i) => {
+                    let p: number;
+                    if (totalPages <= 5) {
+                      p = i + 1;
+                    } else if (page <= 3) {
+                      p = i + 1;
+                    } else if (page >= totalPages - 2) {
+                      p = totalPages - 4 + i;
+                    } else {
+                      p = page - 2 + i;
+                    }
+                    return (
+                      <Button
+                        key={p}
+                        variant={p === page ? 'default' : 'ghost'}
+                        size="icon"
+                        className={`h-8 w-8 rounded-lg text-xs ${
+                          p === page ? 'bg-amber-500 text-white hover:bg-amber-600' : 'border border-gray-200 dark:border-white/10'
+                        }`}
+                        disabled={total === 0}
+                        onClick={() => goToPage(p)}
+                      >
+                        {p}
+                      </Button>
+                    );
+                  })}
+
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 rounded-lg border border-gray-200 dark:border-white/10"
+                    disabled={page >= totalPages || total === 0}
+                    onClick={() => goToPage(page + 1)}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             </div>
           </CardContent>

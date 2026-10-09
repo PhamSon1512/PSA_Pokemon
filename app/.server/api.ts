@@ -300,7 +300,7 @@ api.openapi(adminUpdateProductRoute, async (c) => {
   const { id } = c.req.valid('param');
   const input = c.req.valid('json');
   const db = drizzle(c.env.DB, { schema });
-  const result = await updateProduct(db, id, input);
+  const result = await updateProduct(db, id, input, (await getUserIdFromCookie(c)) as any);
   return c.json(result, 200);
 });
 api.openapi(adminDeleteProductRoute, async (c) => {

@@ -10,7 +10,7 @@ import { getPublicProducts } from '~/.server/services/product.service';
 import { FakePurchaseTicker } from '~/components/store/FakePurchaseTicker';
 import { Button } from '~/components/ui/button';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '~/components/ui/carousel';
-import { addToCart } from '~/lib/store';
+import { addToCart, store } from '~/lib/store';
 
 export async function loader({ context }: Route.LoaderArgs) {
   const db = getDb(context);
@@ -49,6 +49,11 @@ export default function IndexPage({ loaderData }: Route.ComponentProps) {
   };
 
   const handleAddToCart = (product: any) => {
+    if (!store.user) {
+      toast.error('Vui lòng đăng nhập để thêm vào giỏ hàng');
+      navigate('/login');
+      return;
+    }
     addToCart(product);
     toast.success('Sản phẩm đã được thêm vào giỏ hàng');
   };
@@ -144,7 +149,7 @@ export default function IndexPage({ loaderData }: Route.ComponentProps) {
               <p className="text-muted-foreground mt-1.5 text-sm dark:text-gray-400">Sản phẩm nổi bật dành cho người sưu tầm.</p>
             </div>
             <div className="flex w-full flex-1 justify-center md:w-auto">
-              <FakePurchaseTicker />
+              <FakePurchaseTicker products={products} />
             </div>
             <Button variant="link" className="text-brand-dark shrink-0 px-0 font-extrabold" onClick={() => navigate('/products')}>
               Xem tất cả →
@@ -216,18 +221,47 @@ export default function IndexPage({ loaderData }: Route.ComponentProps) {
                               ))}
                             </div>
 
-                            <div className="mt-auto flex items-end justify-between pt-2">
-                              <div>
-                                {product.comparePrice && (
-                                  <div className="text-[11px] text-gray-400 line-through">
-                                    ₫{product.comparePrice.toLocaleString('vi-VN')}
+                            <div className="mt-auto flex flex-col gap-2.5 pt-2">
+                              <div className="flex items-end justify-between">
+                                <div className="flex flex-col gap-0.5">
+                                  {product.comparePrice && (
+                                    <div className="text-[11px] text-gray-400 line-through decoration-gray-300">
+                                      ₫{product.comparePrice.toLocaleString('vi-VN')}
+                                    </div>
+                                  )}
+                                  <div className="text-[15px] leading-none font-bold text-[#ee4d2d]">
+                                    ₫{product.price.toLocaleString('vi-VN')}
                                   </div>
-                                )}
-                                <div className="text-base font-medium text-[#ee4d2d]">₫{product.price.toLocaleString('vi-VN')}</div>
+                                </div>
+                                <div className="mb-[2px] text-[10px] leading-none text-gray-500">
+                                  Đã bán {product.sold > 1000 ? `${(product.sold / 1000).toFixed(1)}k` : product.sold}
+                                </div>
                               </div>
-                              <div className="text-[10px] text-gray-500">
-                                Đã bán {product.sold > 1000 ? `${(product.sold / 1000).toFixed(1)}k` : product.sold}
-                              </div>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleAddToCart(product);
+                                }}
+                                className="text-brand flex w-full items-center justify-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 shadow-sm transition-all hover:bg-amber-100 active:scale-95 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-400 dark:hover:bg-amber-500/20"
+                              >
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  width="14"
+                                  height="14"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2.5"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                >
+                                  <circle cx="8" cy="21" r="1" />
+                                  <circle cx="19" cy="21" r="1" />
+                                  <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12" />
+                                </svg>
+                                <span className="text-xs font-bold">Thêm vào giỏ</span>
+                              </button>
                             </div>
                           </div>
                         </article>

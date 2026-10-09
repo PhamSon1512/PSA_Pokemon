@@ -5,6 +5,7 @@ export * from './setting';
 export * from './relations';
 export * from './card';
 export * from './product';
+export * from './product_variant';
 export * from './order';
 export * from './post';
 export * from './category';

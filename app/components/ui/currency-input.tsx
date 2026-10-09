@@ -51,7 +51,10 @@ export function CurrencyInput({
         onChange={handleChange}
         placeholder={placeholder as string}
         className={cn(
-          'placeholder:text-muted-foreground flex h-9 w-full rounded-lg border border-gray-200 bg-white px-3 pr-12 text-right text-sm font-medium transition-colors focus:border-amber-400 focus:ring-1 focus:ring-amber-400/50 focus:outline-none dark:border-white/10 dark:bg-white/5 dark:text-white',
+          'border-input placeholder:text-muted-foreground dark:bg-input/30 flex h-9 w-full rounded-md border bg-transparent px-3 pr-12 text-right text-base shadow-xs transition-colors outline-none selection:bg-amber-500 selection:text-white md:text-sm',
+          'hover:border-amber-500 hover:bg-amber-500/5 dark:hover:bg-amber-500/10',
+          'focus:border-amber-500 focus-visible:border-amber-500 focus-visible:ring-[3px] focus-visible:ring-amber-500/20',
+          'aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40',
           className,
         )}
         {...(props as any)}

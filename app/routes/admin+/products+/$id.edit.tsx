@@ -11,6 +11,7 @@ import { listActiveBadges } from '~/.server/services/badge.service';
 import { listActiveCategories } from '~/.server/services/category.service';
 import { getProductById } from '~/.server/services/product.service';
 import { ImageUploader } from '~/components/admin/ImageUploader';
+import { ProductVariantsManager } from '~/components/admin/ProductVariantsManager';
 import { RichTextEditor } from '~/components/admin/RichTextEditor';
 import { SeoPreview } from '~/components/admin/SeoPreview';
 import { Badge } from '~/components/ui/badge';
@@ -43,6 +44,19 @@ export interface EditProductFormValues {
   status: 'ACTIVE' | 'DRAFT' | 'SOLD_OUT';
   badges: string[];
   images: string[];
+  hasVariants: boolean;
+  variants: Array<{
+    id?: string;
+    key: string;
+    name: string;
+    sku: string;
+    price: number | undefined;
+    stock: number;
+    image: string;
+    condition: string;
+    language: string;
+    finish: string;
+  }>;
   metaTitle: string;
   metaDescription: string;
   keywords: string;
@@ -105,16 +119,26 @@ export default function EditProductPage({ loaderData }: Route.ComponentProps) {
       status: (product.status as any) || 'ACTIVE',
       badges: product.badges || [],
       images: initialImages,
-      metaTitle: `${product.name} | CardVault VN`,
-      metaDescription: product.description ? product.description.replace(/<[^>]*>?/gm, '').slice(0, 150) : '',
-      keywords: product.category ? `${product.name}, ${product.category}, cardvault` : product.name,
+      hasVariants: !!product.hasVariants,
+      variants: (product.variants || []).map((v: any) => ({
+        ...v,
+        key: v.id || Math.random().toString(36).substring(2, 9),
+      })),
+      metaTitle: product.seoTitle || `${product.name} | CardVault VN`,
+      metaDescription:
+        product.seoDescription || (product.description ? product.description.replace(/<[^>]*>?/gm, '').slice(0, 150) : ''),
+      keywords: product.seoKeywords || (product.category ? `${product.name}, ${product.category}, cardvault` : product.name),
     },
     validate: {
       name: (v) => (!v.trim() ? 'Tên sản phẩm không được để trống' : v.trim().length < 3 ? 'Tên sản phẩm tối thiểu 3 ký tự' : null),
       slug: (v) => (!v.trim() ? 'Slug không được để trống' : null),
       price: (v) => (!v || v <= 0 ? 'Giá bán phải lớn hơn 0' : null),
-      stock: (v) => (!v || v <= 0 ? 'Số lượng tồn kho phải lớn hơn 0' : null),
+      stock: (v) => (v === undefined || v < 0 ? 'Số lượng tồn kho không hợp lệ' : null),
       images: (v) => (v.length === 0 ? 'Vui lòng tải lên ít nhất 1 hình ảnh' : null),
+      variants: {
+        name: (v, values) => (values.hasVariants && !v?.trim() ? 'Tên biến thể bắt buộc' : null),
+        price: (v, values) => (values.hasVariants && (!v || v <= 0) ? 'Giá bán bắt buộc' : null),
+      },
     },
   });
 
@@ -139,6 +163,17 @@ export default function EditProductPage({ loaderData }: Route.ComponentProps) {
         badges: values.badges,
         image: values.images[0] || null,
         images: values.images,
+        hasVariants: values.hasVariants,
+        seoTitle: values.metaTitle || null,
+        seoDescription: values.metaDescription || null,
+        seoKeywords: values.keywords || null,
+        variants: values.hasVariants
+          ? values.variants.map((v) => ({
+              ...v,
+              price: Number(v.price),
+              stock: Number(v.stock),
+            }))
+          : [],
       };
       await xior.create({ baseURL: '/api' }).put(`/admin/products/${product.id}`, payload);
       toast.success('Cập nhật sản phẩm thành công!');
@@ -348,6 +383,15 @@ export default function EditProductPage({ loaderData }: Route.ComponentProps) {
               </div>
             </Panel>
 
+            <ProductVariantsManager
+              productName={form.values.name}
+              hasVariants={form.values.hasVariants}
+              onHasVariantsChange={(val) => form.setFieldValue('hasVariants', val)}
+              variants={form.values.variants}
+              onVariantsChange={(val) => form.setFieldValue('variants', val)}
+              getVariantError={(index, field) => form.errors[`variants.${index}.${field}`] as string}
+            />
+
             <Panel title="Tối ưu hóa tìm kiếm (SEO)">
               <SeoPreview
                 slug={form.values.slug}
@@ -363,7 +407,7 @@ export default function EditProductPage({ loaderData }: Route.ComponentProps) {
           </div>
 
           {/* RIGHT */}
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-4 lg:sticky lg:top-6 lg:self-start">
             <Panel title="Trạng thái xuất bản">
               <div className="flex flex-col gap-3">
                 <Select

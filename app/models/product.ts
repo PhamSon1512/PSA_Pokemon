@@ -23,6 +23,7 @@ export const products = table('products', {
   status: text('status', { enum: ['DRAFT', 'ACTIVE', 'SOLD_OUT'] })
     .notNull()
     .default('DRAFT'),
+  hasVariants: integer('has_variants', { mode: 'boolean' }).notNull().default(false),
 
   // SEO fields
   seoTitle: text('seo_title'),

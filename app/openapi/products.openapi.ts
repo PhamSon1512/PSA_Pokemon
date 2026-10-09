@@ -1,5 +1,17 @@
 import { createRoute, z } from '@hono/zod-openapi';
 
+export const ProductVariantSchema = z.object({
+  id: z.string().optional(), // optional for creation
+  name: z.string(),
+  sku: z.string().nullable().optional(),
+  price: z.number(),
+  stock: z.number().default(0),
+  image: z.string().nullable().optional(),
+  condition: z.string().nullable().optional(),
+  language: z.string().nullable().optional(),
+  finish: z.string().nullable().optional(),
+});
+
 export const ProductSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -15,6 +27,10 @@ export const ProductSchema = z.object({
   type: z.enum(['MYSTERY_BAG', 'NORMAL']),
   stock: z.number(),
   status: z.enum(['DRAFT', 'ACTIVE', 'SOLD_OUT']),
+  hasVariants: z.boolean().default(false),
+  variants: z.array(ProductVariantSchema).optional(),
+  minVariantPrice: z.number().optional(),
+  maxVariantPrice: z.number().optional(),
   seoTitle: z.string().nullable().optional(),
   seoDescription: z.string().nullable().optional(),
   seoKeywords: z.string().nullable().optional(),
@@ -29,6 +45,8 @@ export const ProductCreateInput = ProductSchema.omit({
   updatedAt: true,
   deletedAt: true,
   sold: true,
+  minVariantPrice: true,
+  maxVariantPrice: true,
 });
 
 export const ProductUpdateInput = ProductCreateInput.partial();
