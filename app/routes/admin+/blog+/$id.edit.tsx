@@ -7,8 +7,6 @@ import { toast } from 'sonner';
 import xior from 'xior';
 import { getDb } from '~/.server/db';
 import { requireAuthSession } from '~/.server/guard';
-import { getPostBySlug } from '~/.server/services/post.service'; // I will just get by ID through DB directly since getPostBySlug uses slug
-
 import { Button } from '~/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card';
 import { Input } from '~/components/ui/input';
